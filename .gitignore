@@ -1,9 +1,7 @@
 node_modules/
 dist/
-.env
 *.log
 .DS_Store
-hub-config.json
 projects/
 logs/
 /tmp/
