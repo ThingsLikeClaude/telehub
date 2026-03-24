@@ -61,8 +61,12 @@ export function spawnBotProcess(options: SpawnOptions): BotProcess {
   if (child.stdout) {
     const rl = createInterface({ input: child.stdout });
     rl.on('line', (line) => {
+      logger.debug('Claude CLI stdout raw', { bot: botConfig.name, line: line.slice(0, 200) });
+
       const event = parseStreamLine(line);
       if (!event) return;
+
+      logger.debug('Parsed stream event', { bot: botConfig.name, type: event.type, subtype: event.subtype, hasContent: !!event.content });
 
       // 텍스트 누적
       if (event.type === 'assistant' && event.content) {

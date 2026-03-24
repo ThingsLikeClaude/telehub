@@ -185,6 +185,15 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
         if (editTimer) clearTimeout(editTimer);
         await flushEdit();
 
+        // Fallback: 스트리밍 중 메시지를 못 보냈으면 최종 출력 전송
+        if (!telegramMsgId && result.output && telegram) {
+          logger?.info('Sending fallback response (no stream events captured)', { bot: route.target });
+          const prefix = `${state.config.color} **${state.name}**:\n`;
+          await telegram.sendMessage(route.chatId, prefix + result.output, {
+            replyToMessageId: route.messageId,
+          });
+        }
+
         // 세션 저장
         if (result.sessionId) {
           sessionStore.set(currentProject, route.target, result.sessionId);
