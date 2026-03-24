@@ -33,12 +33,13 @@ export function spawnBotProcess(options: SpawnOptions): BotProcess {
   const { botConfig, projectDir, sessionId, message, logger } = options;
 
   const args = [
+    '-p',
     '--output-format', 'stream-json',
     '--dangerously-skip-permissions',
     '--verbose',
-    ...(botConfig.systemPrompt ? ['--system-prompt', botConfig.systemPrompt] : []),
+    ...(botConfig.systemPrompt ? ['--append-system-prompt', botConfig.systemPrompt] : []),
     ...(sessionId ? ['--resume', sessionId] : []),
-    '--prompt', message,
+    message,
   ];
 
   const workDir = `${projectDir}/${botConfig.workDir}`;

@@ -89,9 +89,10 @@ export function createRouter(bots: BotConfig[], logger?: Logger): Router {
 function runClaudeOnce(prompt: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const child = spawn('claude', [
+      '-p',
       '--output-format', 'text',
       '--dangerously-skip-permissions',
-      '--prompt', prompt,
+      prompt,
     ], { stdio: ['pipe', 'pipe', 'pipe'] });
 
     let output = '';
