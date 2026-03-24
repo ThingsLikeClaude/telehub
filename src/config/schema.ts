@@ -8,6 +8,7 @@ const BotConfigSchema = z.object({
   systemPrompt: z.string(),
   workDir: z.string(),
   color: z.string().default('🤖'),
+  token: z.string().optional(),  // 개별 봇 토큰 (없으면 Hub 토큰 사용)
 });
 
 const HubConfigSchema = z.object({

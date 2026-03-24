@@ -1,5 +1,6 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { createInterface } from 'node:readline';
+
 import type { BotConfig } from '../config/schema.js';
 import type { Logger } from '../utils/logger.js';
 
@@ -47,7 +48,8 @@ export function spawnBotProcess(options: SpawnOptions): BotProcess {
   const workDir = `${projectDir}/${botConfig.workDir}`;
   const child: ChildProcess = spawn('claude', args, {
     cwd: workDir,
-    stdio: ['pipe', 'pipe', 'pipe'],
+    // stdin을 /dev/null로 리다이렉트 (stdin 대기 경고 방지)
+    stdio: ['ignore', 'pipe', 'pipe'],
     env: { ...process.env },
   });
 
@@ -63,20 +65,26 @@ export function spawnBotProcess(options: SpawnOptions): BotProcess {
   if (child.stdout) {
     const rl = createInterface({ input: child.stdout });
     rl.on('line', (line) => {
-      logger.debug('Claude CLI stdout raw', { bot: botConfig.name, line: line.slice(0, 200) });
+      logger.debug('Claude CLI stdout raw', { bot: botConfig.name, line: line.slice(0, 300) });
 
       const event = parseStreamLine(line);
       if (!event) return;
 
-      logger.debug('Parsed stream event', { bot: botConfig.name, type: event.type, subtype: event.subtype, hasContent: !!event.content });
+      logger.debug('Parsed stream event', {
+        bot: botConfig.name,
+        type: event.type,
+        subtype: event.subtype,
+        hasContent: !!event.content,
+        contentLen: event.content?.length,
+      });
 
       // 텍스트 누적
-      if (event.type === 'assistant' && event.content) {
+      if (event.content) {
         outputBuffer += event.content;
       }
 
       // sessionId 추출
-      if (event.type === 'result' && event.sessionId) {
+      if (event.sessionId) {
         currentSessionId = event.sessionId;
       }
 
@@ -101,6 +109,13 @@ export function spawnBotProcess(options: SpawnOptions): BotProcess {
   // 프로세스 종료
   child.on('close', (code) => {
     running = false;
+    logger.debug('Claude CLI process closed', {
+      bot: botConfig.name,
+      code,
+      outputLen: outputBuffer.length,
+      sessionId: currentSessionId,
+    });
+
     if (code === 0) {
       for (const handler of completeHandlers) {
         handler({
@@ -160,6 +175,15 @@ export function spawnBotProcess(options: SpawnOptions): BotProcess {
   };
 }
 
+/**
+ * Claude CLI stream-json 이벤트 파싱
+ *
+ * 가능한 텍스트 위치:
+ * - { type: "assistant", subtype: "text", content_block_delta: { text: "..." } }
+ * - { type: "assistant", content: "..." }
+ * - { type: "assistant", message: { content: [{ text: "..." }] } }
+ * - { type: "result", result: "...", session_id: "..." }
+ */
 export function parseStreamLine(line: string): StreamEvent | null {
   if (!line.trim()) return null;
 
@@ -179,17 +203,52 @@ export function parseStreamLine(line: string): StreamEvent | null {
     event.subtype = parsed.subtype as string;
   }
 
-  // assistant text content
-  if (type === 'assistant' && parsed.content_block_delta) {
-    const delta = parsed.content_block_delta as Record<string, unknown>;
-    event.content = delta.text as string;
+  // sessionId — 여러 위치에서 추출
+  if (parsed.session_id) {
+    event.sessionId = parsed.session_id as string;
   }
 
-  // result event
-  if (type === 'result') {
-    if (parsed.session_id) event.sessionId = parsed.session_id as string;
-    if (parsed.cost_usd !== undefined) event.costUsd = parsed.cost_usd as number;
+  // costUsd
+  if (parsed.cost_usd !== undefined) {
+    event.costUsd = parsed.cost_usd as number;
+  }
+
+  // 텍스트 추출 — 모든 가능한 필드를 시도
+  const content = extractTextContent(parsed);
+  if (content) {
+    event.content = content;
   }
 
   return event;
+}
+
+function extractTextContent(parsed: Record<string, unknown>): string | null {
+  // Pattern 1: content_block_delta.text
+  if (parsed.content_block_delta) {
+    const delta = parsed.content_block_delta as Record<string, unknown>;
+    if (typeof delta.text === 'string') return delta.text;
+  }
+
+  // Pattern 2: direct content field (string)
+  if (typeof parsed.content === 'string' && parsed.content.length > 0) {
+    return parsed.content;
+  }
+
+  // Pattern 3: message.content[].text
+  if (parsed.message && typeof parsed.message === 'object') {
+    const msg = parsed.message as Record<string, unknown>;
+    if (Array.isArray(msg.content)) {
+      const texts = (msg.content as Array<Record<string, unknown>>)
+        .filter((c) => c.type === 'text' && typeof c.text === 'string')
+        .map((c) => c.text as string);
+      if (texts.length > 0) return texts.join('');
+    }
+  }
+
+  // Pattern 4: result field (string) — 최종 결과
+  if (parsed.type === 'result' && typeof parsed.result === 'string') {
+    return parsed.result;
+  }
+
+  return null;
 }

@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "lastUpdated": "2026-03-24T09:06:57.641Z",
+  "lastUpdated": "2026-03-24T09:21:00.908Z",
   "activeFeatures": [
     "telehub",
     "config",
@@ -21,7 +21,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-24T08:04:03.817Z",
-        "lastUpdated": "2026-03-24T08:33:35.283Z"
+        "lastUpdated": "2026-03-24T09:20:24.922Z"
       },
       "lastFile": "D:\\vault\\1-projects\\claude-utils\\telehub\\src\\app.ts"
     },
@@ -34,7 +34,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-24T08:06:07.293Z",
-        "lastUpdated": "2026-03-24T08:21:45.805Z"
+        "lastUpdated": "2026-03-24T09:18:24.112Z"
       },
       "lastFile": "D:\\vault\\1-projects\\claude-utils\\telehub\\src\\config\\watcher.ts"
     },
@@ -47,9 +47,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-24T08:08:25.186Z",
-        "lastUpdated": "2026-03-24T08:32:26.316Z"
+        "lastUpdated": "2026-03-24T09:15:27.716Z"
       },
-      "lastFile": "D:\\vault\\1-projects\\claude-utils\\telehub\\src\\telegram\\formatter.ts"
+      "lastFile": "D:\\vault\\1-projects\\claude-utils\\telehub\\src\\telegram\\bot-sender.ts"
     },
     "store": {
       "phase": "do",
@@ -73,7 +73,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-24T08:11:35.189Z",
-        "lastUpdated": "2026-03-24T09:06:57.641Z"
+        "lastUpdated": "2026-03-24T09:21:00.908Z"
       },
       "lastFile": "D:\\vault\\1-projects\\claude-utils\\telehub\\src\\bot\\process.ts"
     },
@@ -112,7 +112,7 @@
   "session": {
     "startedAt": "2026-03-24T07:49:52.306Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-03-24T09:06:57.641Z"
+    "lastActivity": "2026-03-24T09:21:00.908Z"
   },
   "history": [
     {
@@ -459,6 +459,114 @@
     },
     {
       "timestamp": "2026-03-24T09:06:57.641Z",
+      "feature": "bot",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-24T09:14:29.530Z",
+      "feature": "bot",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-24T09:14:48.142Z",
+      "feature": "bot",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-24T09:15:27.716Z",
+      "feature": "telegram",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-24T09:15:45.515Z",
+      "feature": "config",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-24T09:16:32.538Z",
+      "feature": "bot",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-24T09:16:43.058Z",
+      "feature": "bot",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-24T09:16:59.486Z",
+      "feature": "bot",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-24T09:17:21.473Z",
+      "feature": "bot",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-24T09:17:48.457Z",
+      "feature": "telehub",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-24T09:18:24.112Z",
+      "feature": "config",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-24T09:18:52.772Z",
+      "feature": "telehub",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-24T09:19:08.453Z",
+      "feature": "bot",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-24T09:19:24.557Z",
+      "feature": "bot",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-24T09:19:40.728Z",
+      "feature": "bot",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-24T09:19:49.337Z",
+      "feature": "bot",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-24T09:19:58.719Z",
+      "feature": "bot",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-24T09:20:24.922Z",
+      "feature": "telehub",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-24T09:21:00.908Z",
       "feature": "bot",
       "phase": "do",
       "action": "updated"

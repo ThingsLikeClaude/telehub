@@ -2,6 +2,7 @@ import { watch, type FSWatcher } from 'chokidar';
 import { readFileSync } from 'node:fs';
 import type { HubConfig } from './schema.js';
 import { validateConfig } from './schema.js';
+import type { Logger } from '../utils/logger.js';
 
 export interface ConfigWatcher {
   start(): void;
@@ -9,7 +10,7 @@ export interface ConfigWatcher {
   onReload(callback: (config: HubConfig) => void): void;
 }
 
-export function createConfigWatcher(configPath: string): ConfigWatcher {
+export function createConfigWatcher(configPath: string, logger?: Logger): ConfigWatcher {
   const callbacks: Array<(config: HubConfig) => void> = [];
   let watcher: FSWatcher | null = null;
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -20,11 +21,14 @@ export function createConfigWatcher(configPath: string): ConfigWatcher {
       try {
         const raw = JSON.parse(readFileSync(configPath, 'utf-8')) as unknown;
         const config = validateConfig(raw);
+        logger?.info('Config reloaded successfully', { bots: config.bots.length });
         for (const cb of callbacks) {
           cb(config);
         }
-      } catch {
-        // 유효하지 않은 config — 이전 config 유지, 무시
+      } catch (err) {
+        logger?.warn('Config reload failed — keeping previous config', {
+          error: err instanceof Error ? err.message : String(err),
+        });
       }
     }, 500);
   }

@@ -44,7 +44,14 @@ async function main(): Promise<void> {
   const parser = createMessageParser(triggerMap);
   const router = createRouter(config.bots, logger);
 
-  // 3b. Bot management (now telegram is available)
+  // 5. Health monitoring
+  const healthMonitor = createHealthMonitor({
+    healthTimeoutMs: config.settings.healthTimeoutMs,
+    checkIntervalMs: 60_000,
+    eventBus,
+  });
+
+  // 3b. Bot management (now telegram + healthMonitor available)
   const botManager = createBotManager({
     config,
     sessionStore,
@@ -53,13 +60,7 @@ async function main(): Promise<void> {
     logger,
     telegram,
     triggerMap,
-  });
-
-  // 5. Health monitoring
-  const healthMonitor = createHealthMonitor({
-    healthTimeoutMs: config.settings.healthTimeoutMs,
-    checkIntervalMs: 60_000,
-    eventBus,
+    healthMonitor,
   });
 
   eventBus.on('health:timeout', (event) => {
@@ -70,8 +71,26 @@ async function main(): Promise<void> {
     );
   });
 
-  // 6. Build bot username map (MVP: 단일 Hub 봇이므로 빈 맵)
+  // 6. Build bot username map (토큰 → getMe로 username 조회)
   const botUsernames = new Map<string, string>();
+  for (const botConfig of config.bots) {
+    if (botConfig.token) {
+      try {
+        const { createBotSender } = await import('./telegram/bot-sender.js');
+        const tempSender = createBotSender(botConfig.token, logger);
+        const username = await tempSender.getUsername();
+        if (username) {
+          botUsernames.set(username, botConfig.name);
+          logger.info('Bot username resolved', { bot: botConfig.name, username });
+        }
+      } catch (err) {
+        logger.warn('Failed to resolve bot username', {
+          bot: botConfig.name,
+          error: String(err),
+        });
+      }
+    }
+  }
 
   // 7. Message handler
   telegram.onMessage((msg) => {
@@ -165,7 +184,7 @@ async function main(): Promise<void> {
   }
 
   // 8. Config hot-reload
-  const configWatcher = createConfigWatcher(CONFIG_PATH);
+  const configWatcher = createConfigWatcher(CONFIG_PATH, logger);
   configWatcher.onReload((newConfig) => {
     logger.info('Config reloaded', { bots: newConfig.bots.map((b) => b.name) });
     eventBus.emit({ type: 'config:reloaded' });

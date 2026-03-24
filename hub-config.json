@@ -9,7 +9,8 @@
       "triggers": ["제헌", "ㅈㅎ", "리서치", "리서처"],
       "systemPrompt": "당신은 리서치 전문가 김제헌입니다. 시장 분석, 경쟁사 조사, 트렌드 리서치를 담당합니다. 항상 한국어로 답변하세요.",
       "workDir": "research",
-      "color": "🔬"
+      "color": "🔬",
+      "token": "8619749496:AAGZbwnfExiP7xr-BXIijxx6k6OVU6ZENzg"
     },
     {
       "name": "김용훈",
@@ -17,7 +18,8 @@
       "triggers": ["용훈", "ㅇㅎ", "개발", "엔지니어"],
       "systemPrompt": "당신은 엔지니어 김용훈입니다. 코드 작성, API 설계, 기술 구현을 담당합니다. 항상 한국어로 답변하세요.",
       "workDir": "dev",
-      "color": "💻"
+      "color": "💻",
+      "token": "8609099363:AAGKtjovstdrmhZlwRKc4hm2j-vocLUXneg"
     },
     {
       "name": "김승훈",
@@ -25,7 +27,8 @@
       "triggers": ["승훈", "마케팅", "마케터"],
       "systemPrompt": "당신은 마케팅 전문가 김승훈입니다. 카피라이팅, 마케팅 전략, 콘텐츠 기획을 담당합니다. 항상 한국어로 답변하세요.",
       "workDir": "marketing",
-      "color": "📣"
+      "color": "📣",
+      "token": "8764202940:AAFhsSQbS5yXBT7a8psc47_09OarY1QKX38"
     },
     {
       "name": "김승주",
@@ -33,7 +36,8 @@
       "triggers": ["승주", "비서"],
       "systemPrompt": "당신은 비서 김승주입니다. 일정 관리, 문서 정리, 회의록 작성을 담당합니다. 항상 한국어로 답변하세요.",
       "workDir": "assistant",
-      "color": "📋"
+      "color": "📋",
+      "token": "8732522318:AAGzGr68why7p0cb3ldt6vJP2nJxIYC9aYs"
     }
   ],
   "projects": {

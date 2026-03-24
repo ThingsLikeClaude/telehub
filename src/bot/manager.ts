@@ -5,6 +5,7 @@ import type { QueueManager, RouteResult } from '../core/queue.js';
 import type { EventBus } from '../core/event-bus.js';
 import type { Logger } from '../utils/logger.js';
 import type { TelegramAdapter } from '../telegram/adapter.js';
+import { createBotSender, type BotSender } from '../telegram/bot-sender.js';
 import { spawnBotProcess, type BotProcess, type StreamEvent } from './process.js';
 import { createHandoffDetector, type HandoffDetector } from './handoff.js';
 
@@ -35,6 +36,7 @@ export interface BotManagerDeps {
   logger?: Logger;
   telegram?: TelegramAdapter;
   triggerMap?: Map<string, string>;
+  healthMonitor?: { startMonitoring(bot: string): void; stopMonitoring(bot: string): void; recordActivity(bot: string): void };
 }
 
 const EDIT_DEBOUNCE_MS = 300;
@@ -43,11 +45,20 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
   const { config, sessionStore, queueManager, eventBus } = deps;
   const logger = deps.logger;
   const telegram = deps.telegram;
+  const healthMonitor = deps.healthMonitor;
   let currentProject = config.projects.default;
 
   const handoffDetector: HandoffDetector | null = deps.triggerMap
     ? createHandoffDetector(deps.triggerMap)
     : null;
+
+  // 봇별 개별 sender (토큰이 있는 봇만)
+  const botSenders: Map<string, BotSender> = new Map();
+  for (const botConfig of config.bots) {
+    if (botConfig.token && logger) {
+      botSenders.set(botConfig.name, createBotSender(botConfig.token, logger));
+    }
+  }
 
   const botStates: Map<string, BotState> = new Map(
     config.bots.map((botConfig) => [
@@ -111,6 +122,9 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
         return;
       }
 
+      // 발신용 sender 결정: 개별 토큰 > Hub telegram fallback
+      const sender = botSenders.get(route.target) ?? telegram;
+
       // 봇 실행
       setBotStatus(route.target, 'busy', route.text.slice(0, 50));
 
@@ -143,30 +157,34 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
 
       botStates.set(route.target, { ...state, status: 'busy', process: proc });
 
+      // Health 모니터링 시작
+      healthMonitor?.startMonitoring(route.target);
+      healthMonitor?.recordActivity(route.target);
+
       // Telegram 실시간 업데이트 (300ms debounce editMessage)
       let telegramMsgId: number | null = null;
       let textBuffer = '';
       let editTimer: ReturnType<typeof setTimeout> | null = null;
 
       const flushEdit = async () => {
-        if (!telegram || !telegramMsgId || !textBuffer) return;
-        const displayText = `${state.config.color} **${state.name}**:\n${textBuffer}`;
+        if (!sender || !telegramMsgId || !textBuffer) return;
         try {
-          await telegram.editMessage(route.chatId, telegramMsgId, displayText);
+          await sender.editMessage(route.chatId, telegramMsgId, textBuffer);
         } catch {
           // edit 실패 무시
         }
       };
 
       proc.onEvent((event: StreamEvent) => {
-        if (event.type === 'assistant' && event.content) {
+        healthMonitor?.recordActivity(route.target);
+
+        if (event.content) {
           textBuffer += event.content;
 
-          if (telegram) {
+          if (sender) {
             // 첫 텍스트: 새 메시지 생성
             if (!telegramMsgId) {
-              const prefix = `${state.config.color} **${state.name}**:\n`;
-              telegram.sendMessage(route.chatId, prefix + textBuffer, {
+              sender.sendMessage(route.chatId, textBuffer, {
                 replyToMessageId: route.messageId,
               }).then((msgId) => {
                 telegramMsgId = msgId;
@@ -181,17 +199,23 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
       });
 
       proc.onComplete(async (result) => {
+        healthMonitor?.stopMonitoring(route.target);
+
         // 마지막 편집 flush
         if (editTimer) clearTimeout(editTimer);
         await flushEdit();
 
         // Fallback: 스트리밍 중 메시지를 못 보냈으면 최종 출력 전송
-        if (!telegramMsgId && result.output && telegram) {
-          logger?.info('Sending fallback response (no stream events captured)', { bot: route.target });
-          const prefix = `${state.config.color} **${state.name}**:\n`;
-          await telegram.sendMessage(route.chatId, prefix + result.output, {
-            replyToMessageId: route.messageId,
-          });
+        if (!telegramMsgId && sender) {
+          if (result.output) {
+            logger?.info('Sending fallback response', { bot: route.target, outputLen: result.output.length });
+            await sender.sendMessage(route.chatId, result.output, {
+              replyToMessageId: route.messageId,
+            });
+          } else {
+            logger?.warn('Bot completed with empty output', { bot: route.target });
+            await sender.sendMessage(route.chatId, `⚠️ 응답이 비어있습니다. 다시 시도해주세요.`);
+          }
         }
 
         // 세션 저장
