@@ -1,0 +1,30 @@
+# Context: TeleHub TDD Implementation (Step 1-5)
+
+- **Task**: Design 문서 기반 TDD 구현 — Config, Telegram, Bot, Router, EventBus, ResponseFormatter
+- **Desired Outcome**: `#봇이름` 호출 → Claude CLI 실행 → 응답 수신 → Telegram 전송 전체 플로우 작동
+- **Known Facts**:
+  - Design doc: `docs/02-design/features/telehub.design.md`
+  - 16 modules designed, implementing 10 (Step 1-5)
+  - TypeScript + ESM + Vitest
+  - Claude CLI subprocess (`--output-format stream-json`)
+  - MVP: Hub bot token 1개로 모든 메시지 수신/발신
+- **Constraints**:
+  - File ≤ 800 lines / Function ≤ 50 lines / Nesting ≤ 4 levels
+  - Immutability preferred (spread for new objects)
+  - macOS target, pm2 background
+- **Unknowns**:
+  - Claude CLI stream-json exact format (need to verify)
+  - node-telegram-bot-api mocking strategy
+- **Touchpoints**:
+  - `src/config/schema.ts` — Zod config validation
+  - `src/utils/logger.ts` — structured logging
+  - `src/telegram/adapter.ts` — Telegram polling/send
+  - `src/telegram/parser.ts` — message parsing
+  - `src/telegram/formatter.ts` — response formatting
+  - `src/bot/process.ts` — Claude CLI subprocess wrapper
+  - `src/bot/manager.ts` — bot lifecycle management
+  - `src/bot/handoff.ts` — handoff detection
+  - `src/core/router.ts` — message routing
+  - `src/core/event-bus.ts` — EventEmitter wrapper
+  - `src/core/queue.ts` — per-bot request queue
+  - `src/store/session.ts` — session JSON store

@@ -4,4 +4,7 @@ dist/
 *.log
 .DS_Store
 hub-config.json
-projects/*/sessions.json
+projects/
+logs/
+/tmp/
+.harness/state/
