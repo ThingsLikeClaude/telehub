@@ -1,3 +1,49 @@
+import { writeFileSync, unlinkSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import type { TelegramAdapter } from './adapter.js';
+
+export interface ResponseFormatter {
+  send(
+    chatId: number,
+    botName: string,
+    botColor: string,
+    text: string,
+    replyTo?: number,
+  ): Promise<void>;
+}
+
+export function createResponseFormatter(
+  adapter: TelegramAdapter,
+  longResponseThreshold: number,
+): ResponseFormatter {
+  return {
+    async send(chatId, botName, botColor, text, replyTo) {
+      const prefix = `${botColor} **${botName}**:\n`;
+
+      if (text.length <= longResponseThreshold) {
+        await adapter.sendMessage(chatId, prefix + text, {
+          replyToMessageId: replyTo,
+        });
+      } else {
+        // 긴 응답 → .md 파일 전송
+        const fileName = `${botName}-${Date.now()}.md`;
+        const filePath = join(tmpdir(), `telehub-${fileName}`);
+        writeFileSync(filePath, text);
+        await adapter.sendFile(chatId, filePath, `${botName}의 응답 (파일로 전환됨)`);
+        // 10초 후 삭제
+        setTimeout(() => {
+          try {
+            unlinkSync(filePath);
+          } catch {
+            // 삭제 실패 무시
+          }
+        }, 10_000);
+      }
+    },
+  };
+}
+
 export function splitMessage(text: string, maxLength: number = 4096): string[] {
   if (text.length <= maxLength) return [text];
 

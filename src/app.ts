@@ -33,21 +33,27 @@ async function main(): Promise<void> {
   const sessionStore = createSessionStore(config.projects.baseDir);
   const queueManager = createQueueManager();
 
-  // 3. Bot management
-  const botManager = createBotManager({
-    config,
-    sessionStore,
-    queueManager,
-    eventBus,
-  });
+  // 3. Bot management (telegram injected after creation below)
+  let telegram: ReturnType<typeof createTelegramAdapter>;
 
   // 4. Telegram
   const hubToken = process.env.HUB_BOT_TOKEN;
   if (!hubToken) throw new Error('HUB_BOT_TOKEN is required');
 
-  const telegram = createTelegramAdapter(hubToken, config.telegram.groupChatId, logger);
+  telegram = createTelegramAdapter(hubToken, config.telegram.groupChatId, logger);
   const parser = createMessageParser(triggerMap);
-  const router = createRouter(config.bots);
+  const router = createRouter(config.bots, logger);
+
+  // 3b. Bot management (now telegram is available)
+  const botManager = createBotManager({
+    config,
+    sessionStore,
+    queueManager,
+    eventBus,
+    logger,
+    telegram,
+    triggerMap,
+  });
 
   // 5. Health monitoring
   const healthMonitor = createHealthMonitor({
@@ -78,26 +84,21 @@ async function main(): Promise<void> {
     }
 
     const route = router.route(parsed);
-    if (!route) {
-      if (parsed.type === 'broadcast') {
-        botLog.info('Broadcast received — classification not yet implemented', {
-          text: parsed.text,
-        });
-        telegram.sendMessage(
-          msg.chatId,
-          '📡 브로드캐스트 분류는 아직 구현 중입니다. `#봇이름`으로 직접 호출해주세요.',
-        );
-      }
+
+    if (parsed.type === 'broadcast') {
+      botLog.info('Broadcast received, classifying...', { text: parsed.text });
+      router.routeBroadcast(parsed).then(async (routes) => {
+        for (const r of routes) {
+          await botManager.dispatch(r);
+        }
+      });
       return;
     }
 
+    if (!route) return;
+
     botLog.info('Routing message', { target: route.target, source: route.source });
-    // TODO: botManager.dispatch(route) — Claude CLI subprocess 실행
-    telegram.sendMessage(
-      msg.chatId,
-      `🤖 ${route.target}에게 전달됨: "${route.text}"`,
-      { replyToMessageId: msg.messageId },
-    );
+    botManager.dispatch(route);
   });
 
   async function handleSystemCommand(
