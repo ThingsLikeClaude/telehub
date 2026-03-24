@@ -37,6 +37,7 @@ export function spawnBotProcess(options: SpawnOptions): BotProcess {
     '-p',
     '--output-format', 'stream-json',
     '--dangerously-skip-permissions',
+    '--verbose',
     '--bare',
     ...(botConfig.systemPrompt ? ['--append-system-prompt', botConfig.systemPrompt] : []),
     ...(sessionId ? ['--resume', sessionId] : []),
