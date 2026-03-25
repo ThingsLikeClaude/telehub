@@ -52,6 +52,17 @@ async function main(): Promise<void> {
   });
 
   // 3b. Bot management (now telegram + healthMonitor available)
+  // Message tracker (purge용 — 수신/발신 메시지 ID 기록)
+  const trackedMessageIds: number[] = [];
+  const MAX_TRACKED = 500;
+
+  function trackMessage(messageId: number): void {
+    trackedMessageIds.push(messageId);
+    if (trackedMessageIds.length > MAX_TRACKED) {
+      trackedMessageIds.splice(0, trackedMessageIds.length - MAX_TRACKED);
+    }
+  }
+
   const botManager = createBotManager({
     config,
     sessionStore,
@@ -61,6 +72,7 @@ async function main(): Promise<void> {
     telegram,
     triggerMap,
     healthMonitor,
+    onMessageSent: trackMessage,
   });
 
   eventBus.on('health:timeout', (event) => {
@@ -94,8 +106,17 @@ async function main(): Promise<void> {
     }
   }
 
-  // 7. Message handler
+  // 7. Hub sendMessage 래핑 (발신 메시지 추적)
+  const origSendMessage = telegram.sendMessage.bind(telegram);
+  telegram.sendMessage = async (chatId: number, text: string, options?: Parameters<typeof telegram.sendMessage>[2]) => {
+    const msgId = await origSendMessage(chatId, text, options);
+    trackMessage(msgId);
+    return msgId;
+  };
+
+  // 8. Message handler
   telegram.onMessage((msg) => {
+    trackMessage(msg.messageId); // 수신 메시지 추적
     const parsed = parser.parse(msg, botUsernames);
     const botLog = logger.child({ chatId: msg.chatId, messageId: msg.messageId });
 
@@ -266,28 +287,30 @@ async function main(): Promise<void> {
         break;
       }
       case 'purge': {
-        const count = parseInt(args[0] ?? '50', 10);
-        const limit = Math.min(Math.max(count, 1), 200);
-        const confirmMsg = await telegram.sendMessage(chatId, `🗑️ 최근 ${limit}개 메시지 삭제 중...`);
-        let deleted = 0;
+        const count = parseInt(args[0] ?? '100', 10);
+        const limit = Math.min(Math.max(count, 1), MAX_TRACKED);
+        // 최근 N개의 추적된 메시지 ID 가져오기
+        const idsToDelete = trackedMessageIds.slice(-limit).reverse();
 
-        // 모든 봇 sender 수집 (Hub + 개별 봇)
-        const allSenders = [telegram, ...allBotSenders.map((b) => b.sender)];
-
-        for (let id = confirmMsg; id > confirmMsg - limit - 2 && id > 0; id--) {
-          let success = false;
-          for (const sender of allSenders) {
-            try {
-              await sender.deleteMessage(chatId, id);
-              success = true;
-              break; // 하나라도 성공하면 다음 메시지로
-            } catch {
-              // 다음 sender로 시도
-            }
-          }
-          if (success) deleted++;
+        if (idsToDelete.length === 0) {
+          await telegram.sendMessage(chatId, '삭제할 메시지가 없습니다.');
+          break;
         }
-        logger.info('Purge completed', { deleted, requested: limit });
+
+        let deleted = 0;
+        for (const id of idsToDelete) {
+          try {
+            await telegram.deleteMessage(chatId, id);
+            deleted++;
+          } catch {
+            // 이미 삭제되었거나 접근 불가 — 무시
+          }
+        }
+        // 삭제된 ID를 tracker에서도 제거
+        const deletedSet = new Set(idsToDelete);
+        trackedMessageIds.splice(0, trackedMessageIds.length, ...trackedMessageIds.filter((id) => !deletedSet.has(id)));
+
+        logger.info('Purge completed', { deleted, tracked: idsToDelete.length });
         break;
       }
     }

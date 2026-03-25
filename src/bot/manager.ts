@@ -39,6 +39,7 @@ export interface BotManagerDeps {
   telegram?: TelegramAdapter;
   triggerMap?: Map<string, string>;
   healthMonitor?: { startMonitoring(bot: string): void; stopMonitoring(bot: string): void; recordActivity(bot: string): void };
+  onMessageSent?: (messageId: number) => void;
 }
 
 const EDIT_DEBOUNCE_MS = 300;
@@ -46,6 +47,7 @@ const EDIT_DEBOUNCE_MS = 300;
 export function createBotManager(deps: BotManagerDeps): BotManager {
   const { config, sessionStore, queueManager, eventBus } = deps;
   const logger = deps.logger;
+  const onMessageSent = deps.onMessageSent;
   const telegram = deps.telegram;
   const healthMonitor = deps.healthMonitor;
   let currentProject = config.projects.default;
@@ -230,6 +232,7 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
           currentMsgId = msgId;
           currentMsgText = text;
           sentMessages.push(msgId);
+            onMessageSent?.(msgId);
         } catch {
           // 전송 실패 무시
         }
@@ -270,6 +273,7 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
                 currentMsgId = msgId;
                 currentMsgText = pendingText;
                 sentMessages.push(msgId);
+            onMessageSent?.(msgId);
                 pendingText = '';
                 sendingMsg = false;
               });
