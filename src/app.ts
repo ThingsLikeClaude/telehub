@@ -247,6 +247,48 @@ async function main(): Promise<void> {
     }
   }
 
+  async function handleInlineCommand(
+    botName: string,
+    command: string,
+    args: string[],
+    chatId: number,
+  ): Promise<void> {
+    switch (command) {
+      case 'clear': {
+        await botManager.clearSession(botName);
+        await telegram.sendMessage(chatId, `🗑️ ${botName} 세션 초기화 완료`);
+        break;
+      }
+      case 'session': {
+        const current = botManager.getCurrentProject();
+        const allSessions = sessionStore.getAll(current);
+        const session = allSessions[botName];
+        const sessionId = session?.sessionId ?? '없음';
+        const { resolve: resolvePath } = await import('node:path');
+        const botHome = resolvePath(`${config.bots_home ?? './bots'}/${botManager.getBot(botName)?.config.workDir ?? botName}`);
+        const projectDir = resolvePath(`${config.projects.baseDir}/${current}`);
+        await telegram.sendMessage(chatId, [
+          `📋 ${botName} 세션 정보`,
+          `  🏠 홈: ${botHome}`,
+          `  📂 프로젝트: ${projectDir}`,
+          `  🔑 세션: ${sessionId}`,
+          `  상태: ${botManager.getBot(botName)?.status ?? 'unknown'}`,
+        ].join('\n'));
+        break;
+      }
+      case 'model': {
+        const model = args[0];
+        if (!model) {
+          await telegram.sendMessage(chatId, '사용법: #봇이름 /model sonnet|opus|haiku');
+          return;
+        }
+        // 모델 변경은 향후 구현 (세션 리셋 필요)
+        await telegram.sendMessage(chatId, `⚠️ 모델 변경은 아직 지원되지 않습니다.`);
+        break;
+      }
+    }
+  }
+
   // 8. Config hot-reload
   const configWatcher = createConfigWatcher(CONFIG_PATH, logger);
   configWatcher.onReload((newConfig) => {
