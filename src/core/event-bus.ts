@@ -9,7 +9,9 @@ export type HubEvent =
   | { type: 'queue:dequeued'; bot: string }
   | { type: 'health:timeout'; bot: string }
   | { type: 'config:reloaded' }
-  | { type: 'project:switched'; from: string; to: string };
+  | { type: 'project:switched'; from: string; to: string }
+  | { type: 'orchestrator:plan'; steps: number }
+  | { type: 'orchestrator:step'; bot: string; status: 'start' | 'complete' };
 
 export interface EventBus {
   emit(event: HubEvent): void;

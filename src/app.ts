@@ -11,6 +11,7 @@ import { createSessionStore } from './store/session.js';
 import { createBotManager } from './bot/manager.js';
 import { createHealthMonitor } from './monitor/health.js';
 import { formatStatusDashboard } from './core/commands.js';
+import { createOrchestrator } from './core/orchestrator.js';
 
 const CONFIG_PATH = process.env.CONFIG_PATH ?? 'hub-config.json';
 
@@ -42,7 +43,7 @@ async function main(): Promise<void> {
 
   telegram = createTelegramAdapter(hubToken, config.telegram.groupChatId, logger);
   const parser = createMessageParser(triggerMap);
-  const router = createRouter(config.bots, logger);
+  const router = createRouter(config.bots);
 
   // 5. Health monitoring
   const healthMonitor = createHealthMonitor({
@@ -73,6 +74,14 @@ async function main(): Promise<void> {
     triggerMap,
     healthMonitor,
     onMessageSent: trackMessage,
+  });
+
+  const orchestrator = createOrchestrator({
+    config,
+    botManager,
+    eventBus,
+    telegram,
+    logger,
   });
 
   eventBus.on('health:timeout', (event) => {
@@ -140,37 +149,10 @@ async function main(): Promise<void> {
 
     const route = router.route(parsed);
 
-    if (parsed.type === 'multi') {
-      botLog.info('Multi-bot dispatch', { bots: parsed.botNames, text: parsed.text });
-      for (const botName of parsed.botNames) {
-        botManager.dispatch({
-          target: botName,
-          text: parsed.text,
-          chatId: parsed.chatId,
-          messageId: parsed.messageId,
-          userId: parsed.userId,
-          source: 'keyword',
-        }).catch((err) => {
-          botLog.error('Multi dispatch error', { bot: botName, error: String(err) });
-        });
-      }
-      return;
-    }
-
-    if (parsed.type === 'broadcast') {
-      // 빈 텍스트 = 출석 호출 → 전원에게 기본 메시지 전달
-      if (!parsed.text?.trim()) {
-        parsed.text = '팀장이 부르고 있어. 지금 뭐하고 있는지 간단히 한줄로 응답해.';
-      }
-      botLog.info('Broadcast received, classifying...', { text: parsed.text });
-      router.routeBroadcast(parsed).then(async (routes) => {
-        for (const r of routes) {
-          await botManager.dispatch(r).catch((err) => {
-            botLog.error('Dispatch error', { error: String(err) });
-          });
-        }
-      }).catch((err) => {
-        botLog.error('Broadcast classification error', { error: String(err) });
+    if (parsed.type === 'multi' || parsed.type === 'broadcast') {
+      botLog.info('Orchestrator handling', { type: parsed.type, text: parsed.type === 'broadcast' ? parsed.text : (parsed as { text: string }).text });
+      orchestrator.handle(parsed as Extract<typeof parsed, { type: 'broadcast' | 'multi' }>).catch((err) => {
+        botLog.error('Orchestrator error', { error: String(err) });
       });
       return;
     }

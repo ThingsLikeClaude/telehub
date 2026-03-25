@@ -28,6 +28,7 @@ const HubConfigSchema = z.object({
     pollingInterval: z.number().default(300),
     maxConcurrentBots: z.number().default(4),
     maxHandoffDepth: z.number().default(3),
+    orchestratorModel: z.string().default('haiku'),
   }),
 });
 

@@ -22,6 +22,7 @@ export interface BotManager {
   getBot(name: string): BotState | undefined;
   getAllBots(): ReadonlyArray<BotState>;
   dispatch(route: RouteResult): Promise<void>;
+  dispatchAndWait(route: RouteResult): Promise<{ output: string; sessionId: string }>;
   clearSession(botName: string): Promise<void>;
   clearAllSessions(): Promise<void>;
   switchProject(projectName: string): Promise<void>;
@@ -382,6 +383,12 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
 
         logger?.info('Bot completed', { bot: route.target, sessionId: result.sessionId });
 
+        // Orchestrated 모드에서는 핸드오프 감지 스킵 (orchestrator가 턴 관리)
+        if (route.source === 'orchestrated') {
+          await processNext(route.target);
+          return;
+        }
+
         // 핸드오프 감지 (depth 제한: 최대 3회)
         const currentDepth = route.depth ?? 0;
         const maxDepth = config.settings.maxHandoffDepth ?? 3;
@@ -452,6 +459,35 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
 
         // 대기열 처리
         await processNext(route.target);
+      });
+    },
+
+    async dispatchAndWait(route: RouteResult) {
+      return new Promise<{ output: string; sessionId: string }>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          eventBus.off('bot:complete', onComplete);
+          eventBus.off('bot:error', onError);
+          reject(new Error(`Bot ${route.target} timed out`));
+        }, config.settings.healthTimeoutMs);
+
+        const onComplete = (event: { type: 'bot:complete'; bot: string; output: string; sessionId: string }) => {
+          if (event.bot !== route.target) return;
+          clearTimeout(timeout);
+          eventBus.off('bot:complete', onComplete);
+          eventBus.off('bot:error', onError);
+          resolve({ output: event.output, sessionId: event.sessionId });
+        };
+        const onError = (event: { type: 'bot:error'; bot: string; error: string }) => {
+          if (event.bot !== route.target) return;
+          clearTimeout(timeout);
+          eventBus.off('bot:complete', onComplete);
+          eventBus.off('bot:error', onError);
+          reject(new Error(event.error));
+        };
+
+        eventBus.on('bot:complete', onComplete);
+        eventBus.on('bot:error', onError);
+        manager.dispatch(route).catch(reject);
       });
     },
 
