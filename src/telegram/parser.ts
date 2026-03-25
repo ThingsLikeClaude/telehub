@@ -104,7 +104,8 @@ export function createMessageParser(triggerMap: Map<string, string>): MessagePar
           return { type: 'keyword', botName: triggerResult.botName, text: fullText || stripHashes(text), ...base };
         }
 
-        return { type: 'ignore' };
+        // 매칭 안 되는 #은 broadcast로 처리 (예: #너네 지금 뭐해?)
+        return { type: 'broadcast', text: stripHashes(text), ...base };
       }
 
       // Reply 라우팅
