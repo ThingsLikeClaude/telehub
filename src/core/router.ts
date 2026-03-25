@@ -33,6 +33,7 @@ export function createRouter(bots: BotConfig[], logger?: Logger): Router {
             source: 'reply',
           };
 
+        case 'multi':
         case 'broadcast':
         case 'system':
         case 'ignore':

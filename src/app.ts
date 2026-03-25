@@ -104,6 +104,23 @@ async function main(): Promise<void> {
 
     const route = router.route(parsed);
 
+    if (parsed.type === 'multi') {
+      botLog.info('Multi-bot dispatch', { bots: parsed.botNames, text: parsed.text });
+      for (const botName of parsed.botNames) {
+        botManager.dispatch({
+          target: botName,
+          text: parsed.text,
+          chatId: parsed.chatId,
+          messageId: parsed.messageId,
+          userId: parsed.userId,
+          source: 'keyword',
+        }).catch((err) => {
+          botLog.error('Multi dispatch error', { bot: botName, error: String(err) });
+        });
+      }
+      return;
+    }
+
     if (parsed.type === 'broadcast') {
       botLog.info('Broadcast received, classifying...', { text: parsed.text });
       router.routeBroadcast(parsed).then(async (routes) => {

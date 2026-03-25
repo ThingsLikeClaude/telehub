@@ -15,6 +15,7 @@ export type SystemCommand = '상태' | '프로젝트' | '전환' | '클리어' |
 
 export type ParsedMessage =
   | { type: 'keyword'; botName: string; text: string; chatId: number; messageId: number; userId: number }
+  | { type: 'multi'; botNames: string[]; text: string; chatId: number; messageId: number; userId: number }
   | { type: 'reply'; botName: string; text: string; chatId: number; messageId: number; userId: number }
   | { type: 'broadcast'; text: string; chatId: number; messageId: number; userId: number }
   | { type: 'system'; command: SystemCommand; args: string[]; chatId: number; messageId: number }
@@ -60,7 +61,39 @@ export function createMessageParser(triggerMap: Map<string, string>): MessagePar
           return { type: 'broadcast', text: rest, ...base };
         }
 
-        // 트리거 매칭
+        // 멀티 # 체크: 텍스트 전체에서 #이름 패턴을 모두 찾기
+        const allHashes = text.match(/#\S+/g) ?? [];
+        if (allHashes.length >= 2) {
+          const matched = new Set<string>();
+          const usedTokens = new Set<string>();
+
+          for (const hash of allHashes) {
+            const word = hash.slice(1); // # 제거
+            const botName = matchTrigger(word, triggerMap);
+            if (botName) {
+              matched.add(botName);
+              usedTokens.add(hash);
+            }
+          }
+
+          if (matched.size >= 2) {
+            // # 토큰들을 제거한 나머지가 메시지 본문
+            let cleanText = text;
+            for (const token of usedTokens) {
+              cleanText = cleanText.replace(token, '');
+            }
+            cleanText = cleanText.replace(/\s+/g, ' ').trim();
+
+            return {
+              type: 'multi',
+              botNames: [...matched],
+              text: cleanText,
+              ...base,
+            };
+          }
+        }
+
+        // 단일 트리거 매칭
         const matched = matchTrigger(firstWord, triggerMap);
         if (matched) {
           return { type: 'keyword', botName: matched, text: rest, ...base };
@@ -82,7 +115,7 @@ export function createMessageParser(triggerMap: Map<string, string>): MessagePar
   };
 }
 
-function matchTrigger(
+export function matchTrigger(
   word: string,
   triggerMap: Map<string, string>,
 ): string | null {

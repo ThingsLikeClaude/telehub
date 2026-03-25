@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "lastUpdated": "2026-03-25T00:19:12.104Z",
+  "lastUpdated": "2026-03-25T00:22:56.895Z",
   "activeFeatures": [
     "telehub",
     "config",
@@ -21,7 +21,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-24T08:04:03.817Z",
-        "lastUpdated": "2026-03-25T00:04:01.175Z"
+        "lastUpdated": "2026-03-25T00:22:33.626Z"
       },
       "lastFile": "D:\\vault\\1-projects\\claude-utils\\telehub\\src\\app.ts"
     },
@@ -47,9 +47,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-24T08:08:25.186Z",
-        "lastUpdated": "2026-03-25T00:10:46.751Z"
+        "lastUpdated": "2026-03-25T00:22:10.298Z"
       },
-      "lastFile": "D:\\vault\\1-projects\\claude-utils\\telehub\\src\\telegram\\bot-sender.ts"
+      "lastFile": "D:\\vault\\1-projects\\claude-utils\\telehub\\src\\telegram\\parser.test.ts"
     },
     "store": {
       "phase": "do",
@@ -86,7 +86,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-24T08:12:58.021Z",
-        "lastUpdated": "2026-03-25T00:09:58.265Z"
+        "lastUpdated": "2026-03-25T00:22:56.895Z"
       },
       "lastFile": "D:\\vault\\1-projects\\claude-utils\\telehub\\src\\core\\router.ts"
     },
@@ -112,7 +112,7 @@
   "session": {
     "startedAt": "2026-03-24T07:49:52.306Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-03-25T00:19:12.104Z"
+    "lastActivity": "2026-03-25T00:22:56.895Z"
   },
   "history": [
     {
@@ -712,6 +712,30 @@
     {
       "timestamp": "2026-03-25T00:19:12.104Z",
       "feature": "bot",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-25T00:21:17.395Z",
+      "feature": "telegram",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-25T00:22:10.298Z",
+      "feature": "telegram",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-25T00:22:33.626Z",
+      "feature": "telehub",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-25T00:22:56.895Z",
+      "feature": "core",
       "phase": "do",
       "action": "updated"
     }

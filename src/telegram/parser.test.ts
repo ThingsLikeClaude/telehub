@@ -154,6 +154,45 @@ describe('MessageParser', () => {
     });
   });
 
+  describe('multi # routing', () => {
+    it('should parse #제헌 #용훈 as multi', () => {
+      const result = parser.parse(makeMsg({ text: '#제헌 #용훈 둘이서 협업해' }), botUsernames);
+      expect(result.type).toBe('multi');
+      if (result.type === 'multi') {
+        expect(result.botNames).toContain('김제헌');
+        expect(result.botNames).toContain('김용훈');
+        expect(result.botNames).toHaveLength(2);
+        expect(result.text).toBe('둘이서 협업해');
+      }
+    });
+
+    it('should parse #제헌아 #승주야 with honorifics', () => {
+      const result = parser.parse(makeMsg({ text: '#제헌아 #승주야 너네 둘끼리 해' }), botUsernames);
+      expect(result.type).toBe('multi');
+      if (result.type === 'multi') {
+        expect(result.botNames).toContain('김제헌');
+        expect(result.botNames).toContain('김승주');
+        expect(result.text).toBe('너네 둘끼리 해');
+      }
+    });
+
+    it('should parse 3 bots', () => {
+      const result = parser.parse(makeMsg({ text: '#제헌 #용훈 #승훈 다같이 하자' }), botUsernames);
+      expect(result.type).toBe('multi');
+      if (result.type === 'multi') {
+        expect(result.botNames).toHaveLength(3);
+      }
+    });
+
+    it('should fall back to single keyword when only 1 # matches', () => {
+      const result = parser.parse(makeMsg({ text: '#제헌아 승주한테 물어봐' }), botUsernames);
+      expect(result.type).toBe('keyword');
+      if (result.type === 'keyword') {
+        expect(result.botName).toBe('김제헌');
+      }
+    });
+  });
+
   describe('reply routing', () => {
     it('should route reply to bot message', () => {
       const msg = makeMsg({
