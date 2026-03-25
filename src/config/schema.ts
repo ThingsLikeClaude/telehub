@@ -16,7 +16,8 @@ const HubConfigSchema = z.object({
     groupChatId: z.string(),
   }),
   bots: z.array(BotConfigSchema).min(1),
-  bots_home: z.string().default('./bots'),  // 봇별 고정 홈 디렉토리
+  bots_home: z.string().default('./bots'),  // (레거시) 봇별 고정 홈 디렉토리
+  botTemplateDir: z.string().optional(),     // 봇 템플릿 원본 경로 (프로젝트 생성 시 복사)
   projects: z.object({
     default: z.string(),
     baseDir: z.string(),

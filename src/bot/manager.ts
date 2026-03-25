@@ -1,4 +1,5 @@
-import { mkdirSync, existsSync } from 'node:fs';
+import { mkdirSync, existsSync, cpSync } from 'node:fs';
+import { join } from 'node:path';
 import type { BotConfig, HubConfig } from '../config/schema.js';
 import type { SessionStore } from '../store/session.js';
 import type { QueueManager, RouteResult } from '../core/queue.js';
@@ -149,16 +150,29 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
         }
       }
 
-      // 봇 고정 홈 디렉토리 (CLAUDE.md, .claude/ 등 유지)
-      const botHomeDir = `${config.bots_home ?? './bots'}/${state.config.workDir}`;
-      if (!existsSync(botHomeDir)) {
-        mkdirSync(botHomeDir, { recursive: true });
-      }
+      // 프로젝트별 봇 디렉토리 (cwd로 사용)
+      const projectBaseDir = `${config.projects.baseDir}/${currentProject}`;
+      const projectBotDir = join(projectBaseDir, 'bots', state.config.workDir);
 
-      // 프로젝트 디렉토리 (--add-dir로 접근)
-      const projectDir = `${config.projects.baseDir}/${currentProject}`;
-      if (!existsSync(projectDir)) {
-        mkdirSync(projectDir, { recursive: true });
+      // 프로젝트 봇 디렉토리가 없으면 템플릿에서 복사
+      if (!existsSync(projectBotDir)) {
+        const templateDir = config.botTemplateDir
+          ? join(config.botTemplateDir, state.config.workDir)
+          : join(config.bots_home, state.config.workDir);
+
+        if (existsSync(templateDir)) {
+          logger?.info('Copying bot template to project', {
+            from: templateDir,
+            to: projectBotDir,
+          });
+          cpSync(templateDir, projectBotDir, { recursive: true });
+        } else {
+          logger?.info('No template found, creating empty bot dir', {
+            bot: route.target,
+            dir: projectBotDir,
+          });
+          mkdirSync(projectBotDir, { recursive: true });
+        }
       }
 
       const existingSessionId = sessionStore.get(currentProject, route.target) ?? undefined;
@@ -167,8 +181,7 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
       try {
         proc = spawnBotProcess({
           botConfig: state.config,
-          botHomeDir,
-          projectDir,
+          botHomeDir: projectBotDir,
           sessionId: existingSessionId,
           message: route.text,
           logger: logger ?? { debug() {}, info() {}, warn() {}, error() {}, child() { return this; } },

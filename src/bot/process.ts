@@ -24,15 +24,14 @@ export interface BotProcess {
 
 export interface SpawnOptions {
   botConfig: BotConfig;
-  botHomeDir: string;     // 봇 고정 홈 (bots/김제헌/)
-  projectDir?: string;    // 현재 프로젝트 디렉토리 (--add-dir용)
+  botHomeDir: string;     // 프로젝트별 봇 디렉토리 (projects/{project}/bots/{workDir}/)
   sessionId?: string;
   message: string;
   logger: Logger;
 }
 
 export function spawnBotProcess(options: SpawnOptions): BotProcess {
-  const { botConfig, botHomeDir, projectDir, sessionId, message, logger } = options;
+  const { botConfig, botHomeDir, sessionId, message, logger } = options;
 
   const args = [
     '-p',
@@ -41,12 +40,11 @@ export function spawnBotProcess(options: SpawnOptions): BotProcess {
     '--verbose',
     ...(botConfig.systemPrompt ? ['--append-system-prompt', botConfig.systemPrompt] : []),
     ...(sessionId ? ['--resume', sessionId] : []),
-    ...(projectDir ? ['--add-dir', projectDir] : []),
     '--',      // 옵션 끝, 이후는 positional argument
     message,
   ];
 
-  logger.debug('Spawning Claude CLI', { bot: botConfig.name, cwd: botHomeDir, addDir: projectDir, message, argsCount: args.length, lastArg: args[args.length - 1]?.slice(0, 50) });
+  logger.debug('Spawning Claude CLI', { bot: botConfig.name, cwd: botHomeDir, message, argsCount: args.length, lastArg: args[args.length - 1]?.slice(0, 50) });
 
   const child: ChildProcess = spawn('claude', args, {
     cwd: botHomeDir,

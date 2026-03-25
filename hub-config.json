@@ -40,6 +40,7 @@
       "token": "8732522318:AAGzGr68why7p0cb3ldt6vJP2nJxIYC9aYs"
     }
   ],
+  "botTemplateDir": "/Users/wavetablestudio/dev/bots",
   "projects": {
     "default": "general",
     "baseDir": "./projects"
