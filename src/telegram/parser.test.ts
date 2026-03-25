@@ -16,7 +16,7 @@ const triggerMap = new Map([
 
 const botUsernames = new Map([
   ['jeheon_bot', '김제헌'],
-  ['yonghun_bot', '김용훈'],
+  ['yonghoon_eng_bot', '김용훈'],
 ]);
 
 function makeMsg(overrides: Partial<TelegramMessage> = {}): TelegramMessage {
@@ -39,7 +39,7 @@ describe('MessageParser', () => {
       expect(result).toEqual(expect.objectContaining({
         type: 'keyword',
         botName: '김제헌',
-        text: '조사해줘',
+        text: '제헌 조사해줘',
       }));
     });
 
@@ -48,7 +48,7 @@ describe('MessageParser', () => {
       expect(result.type).toBe('keyword');
       if (result.type === 'keyword') {
         expect(result.botName).toBe('김제헌');
-        expect(result.text).toBe('뭐 좀 찾아줘');
+        expect(result.text).toBe('ㅈㅎ 뭐 좀 찾아줘');
       }
     });
 
@@ -57,7 +57,16 @@ describe('MessageParser', () => {
       expect(result.type).toBe('keyword');
       if (result.type === 'keyword') {
         expect(result.botName).toBe('김제헌');
-        expect(result.text).toBe('이거 해줘');
+        expect(result.text).toBe('제헌아 이거 해줘');
+      }
+    });
+
+    it('should handle bare trigger (#제헌아) with no extra text', () => {
+      const result = parser.parse(makeMsg({ text: '#제헌아' }), botUsernames);
+      expect(result.type).toBe('keyword');
+      if (result.type === 'keyword') {
+        expect(result.botName).toBe('김제헌');
+        expect(result.text).toBe('제헌아');
       }
     });
 
@@ -162,7 +171,7 @@ describe('MessageParser', () => {
         expect(result.botNames).toContain('김제헌');
         expect(result.botNames).toContain('김용훈');
         expect(result.botNames).toHaveLength(2);
-        expect(result.text).toBe('둘이서 협업해');
+        expect(result.text).toBe('제헌 용훈 둘이서 협업해');
       }
     });
 
@@ -172,7 +181,7 @@ describe('MessageParser', () => {
       if (result.type === 'multi') {
         expect(result.botNames).toContain('김제헌');
         expect(result.botNames).toContain('김승주');
-        expect(result.text).toBe('너네 둘끼리 해');
+        expect(result.text).toBe('제헌아 승주야 너네 둘끼리 해');
       }
     });
 
@@ -233,6 +242,35 @@ describe('MessageParser', () => {
         },
       });
       const result = parser.parse(msg, botUsernames);
+      expect(result.type).toBe('ignore');
+    });
+  });
+
+  describe('@mention routing', () => {
+    it('should route @username mention', () => {
+      const result = parser.parse(makeMsg({ text: '@jeheon_bot 조사해줘' }), botUsernames);
+      expect(result.type).toBe('keyword');
+      if (result.type === 'keyword') {
+        expect(result.botName).toBe('김제헌');
+        expect(result.text).toBe('조사해줘');
+      }
+    });
+
+    it('should route multiple @mentions as multi', () => {
+      const result = parser.parse(
+        makeMsg({ text: '@jeheon_bot @yonghoon_eng_bot 같이 해줘' }),
+        botUsernames,
+      );
+      expect(result.type).toBe('multi');
+      if (result.type === 'multi') {
+        expect(result.botNames).toContain('김제헌');
+        expect(result.botNames).toContain('김용훈');
+        expect(result.text).toBe('같이 해줘');
+      }
+    });
+
+    it('should ignore unknown @mention', () => {
+      const result = parser.parse(makeMsg({ text: '@unknown_bot 해줘' }), botUsernames);
       expect(result.type).toBe('ignore');
     });
   });

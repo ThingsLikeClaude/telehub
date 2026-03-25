@@ -11,7 +11,7 @@ export interface TelegramMessage {
   date: number;
 }
 
-export type SystemCommand = '상태' | '프로젝트' | '전환' | '클리어' | '전체클리어' | '끝';
+export type SystemCommand = '상태' | '프로젝트' | '전환' | '클리어' | '전체클리어' | '끝' | '세션';
 
 export type ParsedMessage =
   | { type: 'keyword'; botName: string; text: string; chatId: number; messageId: number; userId: number }
@@ -26,7 +26,7 @@ export interface MessageParser {
 }
 
 const SYSTEM_COMMANDS: ReadonlySet<string> = new Set([
-  '상태', '프로젝트', '전환', '클리어', '전체클리어', '끝',
+  '상태', '프로젝트', '전환', '클리어', '전체클리어', '끝', '세션',
 ]);
 
 const BROADCAST_KEYWORDS: ReadonlySet<string> = new Set([
@@ -34,6 +34,15 @@ const BROADCAST_KEYWORDS: ReadonlySet<string> = new Set([
 ]);
 
 const HONORIFIC_SUFFIXES = /[아야이님씨]$/;
+
+/**
+ * # 을 제거하되 이름/내용은 보존한 텍스트를 반환
+ * "#제헌아 해줘" → "제헌아 해줘"
+ * "#제헌 #승주 협업해" → "제헌 승주 협업해"
+ */
+function stripHashes(text: string): string {
+  return text.replace(/#/g, '').replace(/\s+/g, ' ').trim();
+}
 
 export function createMessageParser(triggerMap: Map<string, string>): MessageParser {
   return {
@@ -48,16 +57,17 @@ export function createMessageParser(triggerMap: Map<string, string>): MessagePar
         const withoutHash = text.slice(1);
         const spaceIdx = withoutHash.indexOf(' ');
         const firstWord = spaceIdx === -1 ? withoutHash : withoutHash.slice(0, spaceIdx);
-        const rest = spaceIdx === -1 ? '' : withoutHash.slice(spaceIdx + 1).trim();
 
         // 시스템 명령 체크
         if (SYSTEM_COMMANDS.has(firstWord)) {
+          const rest = spaceIdx === -1 ? '' : withoutHash.slice(spaceIdx + 1).trim();
           const args = rest ? rest.split(/\s+/) : [];
           return { type: 'system', command: firstWord as SystemCommand, args, ...base };
         }
 
         // 브로드캐스트 체크
         if (BROADCAST_KEYWORDS.has(firstWord)) {
+          const rest = spaceIdx === -1 ? '' : withoutHash.slice(spaceIdx + 1).trim();
           return { type: 'broadcast', text: rest, ...base };
         }
 
@@ -65,29 +75,20 @@ export function createMessageParser(triggerMap: Map<string, string>): MessagePar
         const allHashes = text.match(/#\S+/g) ?? [];
         if (allHashes.length >= 2) {
           const matched = new Set<string>();
-          const usedTokens = new Set<string>();
 
           for (const hash of allHashes) {
-            const word = hash.slice(1); // # 제거
+            const word = hash.slice(1);
             const botName = matchTrigger(word, triggerMap);
             if (botName) {
               matched.add(botName);
-              usedTokens.add(hash);
             }
           }
 
           if (matched.size >= 2) {
-            // # 토큰들을 제거한 나머지가 메시지 본문
-            let cleanText = text;
-            for (const token of usedTokens) {
-              cleanText = cleanText.replace(token, '');
-            }
-            cleanText = cleanText.replace(/\s+/g, ' ').trim();
-
             return {
               type: 'multi',
               botNames: [...matched],
-              text: cleanText,
+              text: stripHashes(text),
               ...base,
             };
           }
@@ -96,7 +97,8 @@ export function createMessageParser(triggerMap: Map<string, string>): MessagePar
         // 단일 트리거 매칭
         const matched = matchTrigger(firstWord, triggerMap);
         if (matched) {
-          return { type: 'keyword', botName: matched, text: rest, ...base };
+          // #만 제거, 이름 포함한 전체 텍스트 전달
+          return { type: 'keyword', botName: matched, text: stripHashes(text), ...base };
         }
 
         return { type: 'ignore' };
@@ -107,6 +109,30 @@ export function createMessageParser(triggerMap: Map<string, string>): MessagePar
         const botName = botUsernames.get(msg.replyToMessage.from.username);
         if (botName) {
           return { type: 'reply', botName, text, ...base };
+        }
+      }
+
+      // @mention 라우팅 (예: @jehun_res_bot 조사해줘)
+      const mentions = text.match(/@(\S+)/g);
+      if (mentions) {
+        const mentionedBots: string[] = [];
+        for (const mention of mentions) {
+          const username = mention.slice(1); // @ 제거
+          const botName = botUsernames.get(username);
+          if (botName) mentionedBots.push(botName);
+        }
+
+        if (mentionedBots.length > 0) {
+          const cleanText = text.replace(/@\S+/g, '').replace(/\s+/g, ' ').trim();
+          if (mentionedBots.length === 1) {
+            return { type: 'keyword', botName: mentionedBots[0], text: cleanText || text, ...base };
+          }
+          return {
+            type: 'multi',
+            botNames: [...new Set(mentionedBots)],
+            text: cleanText || text,
+            ...base,
+          };
         }
       }
 

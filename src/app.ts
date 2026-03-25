@@ -171,7 +171,35 @@ async function main(): Promise<void> {
       }
       case '프로젝트': {
         const current = botManager.getCurrentProject();
-        await telegram.sendMessage(chatId, `📂 현재 프로젝트: ${current}`);
+        const projectDir = `${config.projects.baseDir}/${current}`;
+        const { readdirSync, existsSync: dirExists } = await import('node:fs');
+        const { resolve } = await import('node:path');
+        const absPath = resolve(projectDir);
+        let listing = `📂 현재 프로젝트: ${current}\n📁 경로: ${absPath}`;
+        if (dirExists(projectDir)) {
+          const dirs = readdirSync(projectDir, { withFileTypes: true })
+            .filter((d) => d.isDirectory())
+            .map((d) => `  └ ${d.name}/`);
+          if (dirs.length > 0) listing += '\n' + dirs.join('\n');
+        }
+        await telegram.sendMessage(chatId, listing);
+        break;
+      }
+      case '세션': {
+        const current = botManager.getCurrentProject();
+        const allSessions = sessionStore.getAll(current);
+        const { resolve: resolvePath } = await import('node:path');
+        const botLines = config.bots.map((b) => {
+          const session = allSessions[b.name];
+          const sessionId = session?.sessionId ?? '없음';
+          const shortId = sessionId.length > 8 ? sessionId.slice(0, 8) + '...' : sessionId;
+          const workDir = resolvePath(`${config.projects.baseDir}/${current}/${b.workDir}`);
+          const status = botManager.getBot(b.name)?.status ?? 'unknown';
+          const emoji = status === 'busy' ? '⏳' : status === 'idle' ? '💤' : '❌';
+          return `${b.color} ${b.name}\n  📁 ${workDir}\n  🔑 ${shortId} ${emoji}`;
+        });
+        const header = `📋 세션 정보 (프로젝트: ${current})`;
+        await telegram.sendMessage(chatId, header + '\n\n' + botLines.join('\n\n'));
         break;
       }
       case '전환': {
