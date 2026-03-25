@@ -257,6 +257,9 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
 
           if (!sender) return;
 
+          // 첫 텍스트가 공백/개행만이면 아직 대기
+          if (!pendingText.trim()) return;
+
           // 첫 텍스트: thinking 메시지를 응답으로 교체
           if (!currentMsgId && !sendingMsg) {
             clearInterval(thinkingInterval);
