@@ -45,7 +45,7 @@ export function spawnBotProcess(options: SpawnOptions): BotProcess {
     message,
   ];
 
-  logger.debug('Spawning Claude CLI', { bot: botConfig.name, cwd: botHomeDir, addDir: projectDir });
+  logger.debug('Spawning Claude CLI', { bot: botConfig.name, cwd: botHomeDir, addDir: projectDir, message, argsCount: args.length, lastArg: args[args.length - 1]?.slice(0, 50) });
 
   const child: ChildProcess = spawn('claude', args, {
     cwd: botHomeDir,
