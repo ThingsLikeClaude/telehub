@@ -8,7 +8,7 @@ export interface HandoffDetector {
   detect(botName: string, output: string): HandoffRequest | null;
 }
 
-const HANDOFF_PATTERN = /#(\S+)\s+(.+)/;
+const HANDOFF_PATTERN = /;(\S+)\s+(.+)/;
 
 export function createHandoffDetector(triggerMap: Map<string, string>): HandoffDetector {
   return {

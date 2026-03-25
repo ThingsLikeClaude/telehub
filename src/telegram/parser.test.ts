@@ -34,8 +34,8 @@ describe('MessageParser', () => {
   const parser = createMessageParser(triggerMap);
 
   describe('keyword routing', () => {
-    it('should parse #제헌 trigger', () => {
-      const result = parser.parse(makeMsg({ text: '#제헌 조사해줘' }), botUsernames);
+    it('should parse ;제헌 trigger', () => {
+      const result = parser.parse(makeMsg({ text: ';제헌 조사해줘' }), botUsernames);
       expect(result).toEqual(expect.objectContaining({
         type: 'keyword',
         botName: '김제헌',
@@ -43,8 +43,8 @@ describe('MessageParser', () => {
       }));
     });
 
-    it('should parse #ㅈㅎ trigger (초성)', () => {
-      const result = parser.parse(makeMsg({ text: '#ㅈㅎ 뭐 좀 찾아줘' }), botUsernames);
+    it('should parse ;ㅈㅎ trigger (초성)', () => {
+      const result = parser.parse(makeMsg({ text: ';ㅈㅎ 뭐 좀 찾아줘' }), botUsernames);
       expect(result.type).toBe('keyword');
       if (result.type === 'keyword') {
         expect(result.botName).toBe('김제헌');
@@ -52,8 +52,8 @@ describe('MessageParser', () => {
       }
     });
 
-    it('should handle 호칭 접미사 (#제헌아)', () => {
-      const result = parser.parse(makeMsg({ text: '#제헌아 이거 해줘' }), botUsernames);
+    it('should handle 호칭 접미사 (;제헌아)', () => {
+      const result = parser.parse(makeMsg({ text: ';제헌아 이거 해줘' }), botUsernames);
       expect(result.type).toBe('keyword');
       if (result.type === 'keyword') {
         expect(result.botName).toBe('김제헌');
@@ -61,34 +61,34 @@ describe('MessageParser', () => {
       }
     });
 
-    it('should handle bare trigger (#제헌아) with no extra text', () => {
-      const result = parser.parse(makeMsg({ text: '#제헌아' }), botUsernames);
+    it('should handle bare trigger (;제헌아) with no extra text', () => {
+      const result = parser.parse(makeMsg({ text: ';제헌아' }), botUsernames);
       expect(result.type).toBe('keyword');
       if (result.type === 'keyword') {
         expect(result.botName).toBe('김제헌');
-        // bare trigger → stripHashes fallback
+        // bare trigger → stripSemicolons fallback
         expect(result.text).toBeTruthy();
       }
     });
 
-    it('should handle 호칭 접미사 (#용훈이)', () => {
-      const result = parser.parse(makeMsg({ text: '#용훈이 코드 짜줘' }), botUsernames);
+    it('should handle 호칭 접미사 (;용훈이)', () => {
+      const result = parser.parse(makeMsg({ text: ';용훈이 코드 짜줘' }), botUsernames);
       expect(result.type).toBe('keyword');
       if (result.type === 'keyword') {
         expect(result.botName).toBe('김용훈');
       }
     });
 
-    it('should handle 호칭 접미사 (#승주님)', () => {
-      const result = parser.parse(makeMsg({ text: '#승주님 일정 정리해줘' }), botUsernames);
+    it('should handle 호칭 접미사 (;승주님)', () => {
+      const result = parser.parse(makeMsg({ text: ';승주님 일정 정리해줘' }), botUsernames);
       expect(result.type).toBe('keyword');
       if (result.type === 'keyword') {
         expect(result.botName).toBe('김승주');
       }
     });
 
-    it('should handle no-space trigger (#제헌아뭐해)', () => {
-      const result = parser.parse(makeMsg({ text: '#제헌아뭐해' }), botUsernames);
+    it('should handle no-space trigger (;제헌아뭐해)', () => {
+      const result = parser.parse(makeMsg({ text: ';제헌아뭐해' }), botUsernames);
       expect(result.type).toBe('keyword');
       if (result.type === 'keyword') {
         expect(result.botName).toBe('김제헌');
@@ -96,8 +96,8 @@ describe('MessageParser', () => {
       }
     });
 
-    it('should handle no-space with rest (#제헌아이거해줘)', () => {
-      const result = parser.parse(makeMsg({ text: '#제헌아이거해줘 빨리' }), botUsernames);
+    it('should handle no-space with rest (;제헌아이거해줘)', () => {
+      const result = parser.parse(makeMsg({ text: ';제헌아이거해줘 빨리' }), botUsernames);
       expect(result.type).toBe('keyword');
       if (result.type === 'keyword') {
         expect(result.botName).toBe('김제헌');
@@ -105,16 +105,16 @@ describe('MessageParser', () => {
       }
     });
 
-    it('should broadcast unknown # trigger', () => {
-      const result = parser.parse(makeMsg({ text: '#모르는봇 해줘' }), botUsernames);
+    it('should broadcast unknown ; trigger', () => {
+      const result = parser.parse(makeMsg({ text: ';모르는봇 해줘' }), botUsernames);
       expect(result.type).toBe('broadcast');
       if (result.type === 'broadcast') {
         expect(result.text).toBe('모르는봇 해줘');
       }
     });
 
-    it('should broadcast #너네 as unmatched trigger', () => {
-      const result = parser.parse(makeMsg({ text: '#너네 지금 뭐하고있어?' }), botUsernames);
+    it('should broadcast ;너네 as unmatched trigger', () => {
+      const result = parser.parse(makeMsg({ text: ';너네 지금 뭐하고있어?' }), botUsernames);
       expect(result.type).toBe('broadcast');
       if (result.type === 'broadcast') {
         expect(result.text).toBe('너네 지금 뭐하고있어?');
@@ -123,79 +123,84 @@ describe('MessageParser', () => {
   });
 
   describe('system commands', () => {
-    it('should parse #상태', () => {
-      const result = parser.parse(makeMsg({ text: '#상태' }), botUsernames);
+    it('should parse /status', () => {
+      const result = parser.parse(makeMsg({ text: '/status' }), botUsernames);
       expect(result).toEqual(expect.objectContaining({
         type: 'system',
-        command: '상태',
+        command: 'status',
       }));
     });
 
-    it('should parse #전환 with args', () => {
-      const result = parser.parse(makeMsg({ text: '#전환 new-project' }), botUsernames);
+    it('should parse /switch with args', () => {
+      const result = parser.parse(makeMsg({ text: '/switch new-project' }), botUsernames);
       expect(result.type).toBe('system');
       if (result.type === 'system') {
-        expect(result.command).toBe('전환');
+        expect(result.command).toBe('switch');
         expect(result.args).toEqual(['new-project']);
       }
     });
 
-    it('should parse #클리어', () => {
-      const result = parser.parse(makeMsg({ text: '#클리어' }), botUsernames);
+    it('should parse /clear', () => {
+      const result = parser.parse(makeMsg({ text: '/clear' }), botUsernames);
       expect(result.type).toBe('system');
       if (result.type === 'system') {
-        expect(result.command).toBe('클리어');
+        expect(result.command).toBe('clear');
       }
     });
 
-    it('should parse #전체클리어', () => {
-      const result = parser.parse(makeMsg({ text: '#전체클리어' }), botUsernames);
+    it('should parse /clearall', () => {
+      const result = parser.parse(makeMsg({ text: '/clearall' }), botUsernames);
       expect(result.type).toBe('system');
       if (result.type === 'system') {
-        expect(result.command).toBe('전체클리어');
+        expect(result.command).toBe('clearall');
       }
     });
 
-    it('should parse #끝', () => {
-      const result = parser.parse(makeMsg({ text: '#끝' }), botUsernames);
+    it('should parse /stop', () => {
+      const result = parser.parse(makeMsg({ text: '/stop' }), botUsernames);
       expect(result.type).toBe('system');
       if (result.type === 'system') {
-        expect(result.command).toBe('끝');
+        expect(result.command).toBe('stop');
       }
     });
 
-    it('should parse #프로젝트', () => {
-      const result = parser.parse(makeMsg({ text: '#프로젝트' }), botUsernames);
+    it('should parse /project', () => {
+      const result = parser.parse(makeMsg({ text: '/project' }), botUsernames);
       expect(result.type).toBe('system');
       if (result.type === 'system') {
-        expect(result.command).toBe('프로젝트');
+        expect(result.command).toBe('project');
       }
+    });
+
+    it('should ignore unknown / command', () => {
+      const result = parser.parse(makeMsg({ text: '/unknown' }), botUsernames);
+      expect(result.type).toBe('ignore');
     });
   });
 
   describe('broadcast', () => {
-    it('should parse #얘들아', () => {
-      const result = parser.parse(makeMsg({ text: '#얘들아 경쟁사 분석하자' }), botUsernames);
+    it('should parse ;얘들아', () => {
+      const result = parser.parse(makeMsg({ text: ';얘들아 경쟁사 분석하자' }), botUsernames);
       expect(result.type).toBe('broadcast');
       if (result.type === 'broadcast') {
         expect(result.text).toBe('경쟁사 분석하자');
       }
     });
 
-    it('should parse #모두', () => {
-      const result = parser.parse(makeMsg({ text: '#모두 회의 시작' }), botUsernames);
+    it('should parse ;모두', () => {
+      const result = parser.parse(makeMsg({ text: ';모두 회의 시작' }), botUsernames);
       expect(result.type).toBe('broadcast');
     });
 
-    it('should parse #전체', () => {
-      const result = parser.parse(makeMsg({ text: '#전체 보고해' }), botUsernames);
+    it('should parse ;전체', () => {
+      const result = parser.parse(makeMsg({ text: ';전체 보고해' }), botUsernames);
       expect(result.type).toBe('broadcast');
     });
   });
 
-  describe('multi # routing', () => {
-    it('should parse #제헌 #용훈 as multi', () => {
-      const result = parser.parse(makeMsg({ text: '#제헌 #용훈 둘이서 협업해' }), botUsernames);
+  describe('multi ; routing', () => {
+    it('should parse ;제헌 ;용훈 as multi', () => {
+      const result = parser.parse(makeMsg({ text: ';제헌 ;용훈 둘이서 협업해' }), botUsernames);
       expect(result.type).toBe('multi');
       if (result.type === 'multi') {
         expect(result.botNames).toContain('김제헌');
@@ -205,8 +210,8 @@ describe('MessageParser', () => {
       }
     });
 
-    it('should parse #제헌아 #승주야 with honorifics', () => {
-      const result = parser.parse(makeMsg({ text: '#제헌아 #승주야 너네 둘끼리 해' }), botUsernames);
+    it('should parse ;제헌아 ;승주야 with honorifics', () => {
+      const result = parser.parse(makeMsg({ text: ';제헌아 ;승주야 너네 둘끼리 해' }), botUsernames);
       expect(result.type).toBe('multi');
       if (result.type === 'multi') {
         expect(result.botNames).toContain('김제헌');
@@ -216,15 +221,15 @@ describe('MessageParser', () => {
     });
 
     it('should parse 3 bots', () => {
-      const result = parser.parse(makeMsg({ text: '#제헌 #용훈 #승훈 다같이 하자' }), botUsernames);
+      const result = parser.parse(makeMsg({ text: ';제헌 ;용훈 ;승훈 다같이 하자' }), botUsernames);
       expect(result.type).toBe('multi');
       if (result.type === 'multi') {
         expect(result.botNames).toHaveLength(3);
       }
     });
 
-    it('should fall back to single keyword when only 1 # matches', () => {
-      const result = parser.parse(makeMsg({ text: '#제헌아 승주한테 물어봐' }), botUsernames);
+    it('should fall back to single keyword when only 1 ; matches', () => {
+      const result = parser.parse(makeMsg({ text: ';제헌아 승주한테 물어봐' }), botUsernames);
       expect(result.type).toBe('keyword');
       if (result.type === 'keyword') {
         expect(result.botName).toBe('김제헌');
@@ -316,14 +321,14 @@ describe('MessageParser', () => {
       expect(result.type).toBe('ignore');
     });
 
-    it('should ignore plain message without #', () => {
+    it('should ignore plain message without ; or /', () => {
       const result = parser.parse(makeMsg({ text: '그냥 대화' }), botUsernames);
       expect(result.type).toBe('ignore');
     });
 
     it('should preserve chatId and messageId', () => {
       const result = parser.parse(
-        makeMsg({ text: '#제헌 테스트', chatId: -999, messageId: 42 }),
+        makeMsg({ text: ';제헌 테스트', chatId: -999, messageId: 42 }),
         botUsernames,
       );
       if (result.type === 'keyword') {

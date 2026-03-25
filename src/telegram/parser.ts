@@ -11,7 +11,7 @@ export interface TelegramMessage {
   date: number;
 }
 
-export type SystemCommand = '상태' | '프로젝트' | '전환' | '클리어' | '전체클리어' | '끝' | '세션';
+export type SystemCommand = 'status' | 'project' | 'switch' | 'clear' | 'clearall' | 'stop' | 'session' | 'init';
 
 export type InlineCommand = 'clear' | 'session' | 'model';
 
@@ -28,8 +28,15 @@ export interface MessageParser {
   parse(msg: TelegramMessage, botUsernames: Map<string, string>): ParsedMessage;
 }
 
-const SYSTEM_COMMANDS: ReadonlySet<string> = new Set([
-  '상태', '프로젝트', '전환', '클리어', '전체클리어', '끝', '세션',
+const SYSTEM_COMMANDS: ReadonlyMap<string, SystemCommand> = new Map([
+  ['status', 'status'],
+  ['project', 'project'],
+  ['switch', 'switch'],
+  ['clear', 'clear'],
+  ['clearall', 'clearall'],
+  ['stop', 'stop'],
+  ['session', 'session'],
+  ['init', 'init'],
 ]);
 
 const INLINE_COMMANDS: ReadonlyMap<string, InlineCommand> = new Map([
@@ -45,12 +52,12 @@ const BROADCAST_KEYWORDS: ReadonlySet<string> = new Set([
 const HONORIFIC_SUFFIXES = /[아야이님씨]$/;
 
 /**
- * # 을 제거하되 이름/내용은 보존한 텍스트를 반환
- * "#제헌아 해줘" → "제헌아 해줘"
- * "#제헌 #승주 협업해" → "제헌 승주 협업해"
+ * ; 을 제거하되 이름/내용은 보존한 텍스트를 반환
+ * ";제헌아 해줘" → "제헌아 해줘"
+ * ";제헌 ;승주 협업해" → "제헌 승주 협업해"
  */
-function stripHashes(text: string): string {
-  return text.replace(/#/g, '').replace(/\s+/g, ' ').trim();
+function stripSemicolons(text: string): string {
+  return text.replace(/;/g, '').replace(/\s+/g, ' ').trim();
 }
 
 export function createMessageParser(triggerMap: Map<string, string>): MessageParser {
@@ -61,32 +68,42 @@ export function createMessageParser(triggerMap: Map<string, string>): MessagePar
 
       const base = { chatId: msg.chatId, messageId: msg.messageId, userId: msg.from.id };
 
-      // # prefix 처리
-      if (text.startsWith('#')) {
-        const withoutHash = text.slice(1);
-        const spaceIdx = withoutHash.indexOf(' ');
-        const firstWord = spaceIdx === -1 ? withoutHash : withoutHash.slice(0, spaceIdx);
+      // / prefix → 시스템 명령
+      if (text.startsWith('/')) {
+        const withoutSlash = text.slice(1);
+        const spaceIdx = withoutSlash.indexOf(' ');
+        const firstWord = (spaceIdx === -1 ? withoutSlash : withoutSlash.slice(0, spaceIdx)).toLowerCase();
 
-        // 시스템 명령 체크
-        if (SYSTEM_COMMANDS.has(firstWord)) {
-          const rest = spaceIdx === -1 ? '' : withoutHash.slice(spaceIdx + 1).trim();
+        const sysCmd = SYSTEM_COMMANDS.get(firstWord);
+        if (sysCmd) {
+          const rest = spaceIdx === -1 ? '' : withoutSlash.slice(spaceIdx + 1).trim();
           const args = rest ? rest.split(/\s+/) : [];
-          return { type: 'system', command: firstWord as SystemCommand, args, ...base };
+          return { type: 'system', command: sysCmd, args, ...base };
         }
+
+        // 매칭 안 되는 /는 무시 (Telegram 기본 봇 명령 등)
+        return { type: 'ignore' };
+      }
+
+      // ; prefix → 봇 호출 / 브로드캐스트
+      if (text.startsWith(';')) {
+        const withoutSemicolon = text.slice(1);
+        const spaceIdx = withoutSemicolon.indexOf(' ');
+        const firstWord = spaceIdx === -1 ? withoutSemicolon : withoutSemicolon.slice(0, spaceIdx);
 
         // 브로드캐스트 체크
         if (BROADCAST_KEYWORDS.has(firstWord)) {
-          const rest = spaceIdx === -1 ? '' : withoutHash.slice(spaceIdx + 1).trim();
+          const rest = spaceIdx === -1 ? '' : withoutSemicolon.slice(spaceIdx + 1).trim();
           return { type: 'broadcast', text: rest, ...base };
         }
 
-        // 멀티 # 체크: 텍스트 전체에서 #이름 패턴을 모두 찾기
-        const allHashes = text.match(/#\S+/g) ?? [];
-        if (allHashes.length >= 2) {
+        // 멀티 ; 체크: 텍스트 전체에서 ;이름 패턴을 모두 찾기
+        const allSemicolons = text.match(/;\S+/g) ?? [];
+        if (allSemicolons.length >= 2) {
           const matched = new Set<string>();
 
-          for (const hash of allHashes) {
-            const word = hash.slice(1);
+          for (const semi of allSemicolons) {
+            const word = semi.slice(1);
             const botName = matchTrigger(word, triggerMap);
             if (botName) {
               matched.add(botName);
@@ -97,20 +114,20 @@ export function createMessageParser(triggerMap: Map<string, string>): MessagePar
             return {
               type: 'multi',
               botNames: [...matched],
-              text: stripHashes(text),
+              text: stripSemicolons(text),
               ...base,
             };
           }
         }
 
-        // 단일 트리거 매칭 (prefix 매칭 포함: #제헌아뭐해 → 제헌 + 뭐해)
+        // 단일 트리거 매칭 (prefix 매칭 포함: ;제헌아뭐해 → 제헌 + 뭐해)
         const triggerResult = matchTriggerFull(firstWord, triggerMap);
         if (triggerResult) {
           const restFromTrigger = triggerResult.rest;
-          const restFromSpace = spaceIdx === -1 ? '' : withoutHash.slice(spaceIdx + 1).trim();
+          const restFromSpace = spaceIdx === -1 ? '' : withoutSemicolon.slice(spaceIdx + 1).trim();
           const fullText = [restFromTrigger, restFromSpace].filter(Boolean).join(' ');
 
-          // 인라인 명령어 감지: #제헌 /clear, #제헌 /session 등
+          // 인라인 명령어 감지: ;제헌 /clear, ;제헌 /session 등
           const firstToken = fullText.split(' ')[0];
           const inlineCmd = INLINE_COMMANDS.get(firstToken);
           if (inlineCmd) {
@@ -118,11 +135,11 @@ export function createMessageParser(triggerMap: Map<string, string>): MessagePar
             return { type: 'inline_cmd', botName: triggerResult.botName, command: inlineCmd, args: cmdArgs, chatId: base.chatId, messageId: base.messageId };
           }
 
-          return { type: 'keyword', botName: triggerResult.botName, text: fullText || stripHashes(text), ...base };
+          return { type: 'keyword', botName: triggerResult.botName, text: fullText || stripSemicolons(text), ...base };
         }
 
-        // 매칭 안 되는 #은 broadcast로 처리 (예: #너네 지금 뭐해?)
-        return { type: 'broadcast', text: stripHashes(text), ...base };
+        // 매칭 안 되는 ;은 broadcast로 처리 (예: ;너네 지금 뭐해?)
+        return { type: 'broadcast', text: stripSemicolons(text), ...base };
       }
 
       // Reply 라우팅

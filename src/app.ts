@@ -136,7 +136,7 @@ async function main(): Promise<void> {
 
     if (parsed.type === 'broadcast') {
       // 빈 텍스트 = 출석 호출 → 전원에게 기본 메시지 전달
-      if (!parsed.text || !parsed.text.trim()) {
+      if (!parsed.text?.trim()) {
         parsed.text = '팀장이 부르고 있어. 지금 뭐하고 있는지 간단히 한줄로 응답해.';
       }
       botLog.info('Broadcast received, classifying...', { text: parsed.text });
@@ -166,7 +166,7 @@ async function main(): Promise<void> {
     chatId: number,
   ): Promise<void> {
     switch (command) {
-      case '상태': {
+      case 'status': {
         const bots = botManager.getAllBots().map((b) => ({
           name: b.name,
           role: b.config.role,
@@ -186,7 +186,7 @@ async function main(): Promise<void> {
         await telegram.sendMessage(chatId, dashboard);
         break;
       }
-      case '프로젝트': {
+      case 'project': {
         const current = botManager.getCurrentProject();
         const projectDir = `${config.projects.baseDir}/${current}`;
         const { readdirSync, existsSync: dirExists } = await import('node:fs');
@@ -205,7 +205,7 @@ async function main(): Promise<void> {
         await telegram.sendMessage(chatId, listing);
         break;
       }
-      case '세션': {
+      case 'session': {
         const current = botManager.getCurrentProject();
         const allSessions = sessionStore.getAll(current);
         const { resolve: resolvePath, join: joinPath } = await import('node:path');
@@ -222,32 +222,32 @@ async function main(): Promise<void> {
         await telegram.sendMessage(chatId, header + '\n\n' + botLines.join('\n\n'));
         break;
       }
-      case '전환': {
+      case 'switch': {
         const projectName = args[0];
         if (!projectName) {
-          await telegram.sendMessage(chatId, '사용법: #전환 프로젝트명');
+          await telegram.sendMessage(chatId, '사용법: /switch 프로젝트명');
           return;
         }
         await botManager.switchProject(projectName);
         await telegram.sendMessage(chatId, `📂 프로젝트 전환: ${projectName}`);
         break;
       }
-      case '클리어': {
+      case 'clear': {
         const botName = args[0];
         if (botName) {
           await botManager.clearSession(botName);
           await telegram.sendMessage(chatId, `🗑️ 세션 초기화: ${botName}`);
         } else {
-          await telegram.sendMessage(chatId, '사용법: #클리어 봇이름 또는 #전체클리어');
+          await telegram.sendMessage(chatId, '사용법: /clear 봇이름 또는 /clearall');
         }
         break;
       }
-      case '전체클리어': {
+      case 'clearall': {
         await botManager.clearAllSessions();
         await telegram.sendMessage(chatId, '🗑️ 전체 세션 초기화 완료');
         break;
       }
-      case '봇초기화': {
+      case 'init': {
         const current = botManager.getCurrentProject();
         await botManager.clearAllSessions();
         const { created, skipped } = botManager.initBots();
@@ -259,7 +259,7 @@ async function main(): Promise<void> {
         await telegram.sendMessage(chatId, lines.join('\n'));
         break;
       }
-      case '끝': {
+      case 'stop': {
         await telegram.sendMessage(chatId, '✅ 활성 작업 종료');
         break;
       }
