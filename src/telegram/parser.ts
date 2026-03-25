@@ -32,6 +32,12 @@ const SYSTEM_COMMANDS: ReadonlySet<string> = new Set([
   '상태', '프로젝트', '전환', '클리어', '전체클리어', '끝', '세션',
 ]);
 
+const INLINE_COMMANDS: ReadonlyMap<string, InlineCommand> = new Map([
+  ['/clear', 'clear'],
+  ['/session', 'session'],
+  ['/model', 'model'],
+]);
+
 const BROADCAST_KEYWORDS: ReadonlySet<string> = new Set([
   '얘들아', '모두', '전체',
 ]);
