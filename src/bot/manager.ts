@@ -239,8 +239,15 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
         if (!sender || !currentMsgId || !currentMsgText) return;
         try {
           await sender.editMessage(route.chatId, currentMsgId, currentMsgText);
-        } catch {
-          // edit 실패 무시
+        } catch (err) {
+          logger?.debug('Edit message failed, sending new', { bot: route.target, error: String(err) });
+          // edit 실패 시 새 메시지로 전송
+          try {
+            const newId = await sender.sendMessage(route.chatId, currentMsgText);
+            currentMsgId = newId;
+            sentMessages.push(newId);
+            onMessageSent?.(newId);
+          } catch { /* 전송도 실패하면 포기 */ }
         }
       };
 
@@ -285,10 +292,19 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
 
             if (thinkingMsgId) {
               currentMsgId = thinkingMsgId;
-              currentMsgText = pendingText;
+              currentMsgText = pendingText.trimStart();
               thinkingMsgId = null;
               sentMessages.push(currentMsgId);
-              sender.editMessage(route.chatId, currentMsgId, currentMsgText);
+              onMessageSent?.(currentMsgId);
+              sender.editMessage(route.chatId, currentMsgId, currentMsgText).catch(() => {
+                // edit 실패 시 (마크다운 파싱 등) 새 메시지로 fallback
+                sender.deleteMessage(route.chatId, currentMsgId!).catch(() => {});
+                sender.sendMessage(route.chatId, currentMsgText).then((newId) => {
+                  currentMsgId = newId;
+                  sentMessages.push(newId);
+                  onMessageSent?.(newId);
+                }).catch(() => {});
+              });
               pendingText = '';
             } else {
               sendingMsg = true;
