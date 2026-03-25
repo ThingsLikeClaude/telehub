@@ -378,14 +378,24 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
 
         logger?.info('Bot completed', { bot: route.target, sessionId: result.sessionId });
 
-        // 핸드오프 감지
-        if (handoffDetector) {
+        // 핸드오프 감지 (depth 제한: 최대 3회)
+        const currentDepth = route.depth ?? 0;
+        const maxDepth = config.settings.maxHandoffDepth ?? 3;
+
+        if (handoffDetector && currentDepth < maxDepth) {
           const handoff = handoffDetector.detect(route.target, result.output);
           if (handoff) {
+            const nextDepth = currentDepth + 1;
             eventBus.emit({ type: 'bot:handoff', ...handoff });
+            logger?.info('Handoff detected', {
+              from: handoff.from,
+              to: handoff.to,
+              depth: nextDepth,
+              maxDepth,
+            });
             telegram?.sendMessage(
               route.chatId,
-              `🔄 ${handoff.from} → ${handoff.to}: 핸드오프`,
+              `🔄 ${handoff.from} → ${handoff.to} (${nextDepth}/${maxDepth})`,
             );
             await manager.dispatch({
               target: handoff.to,
@@ -393,9 +403,15 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
               chatId: route.chatId,
               messageId: route.messageId,
               userId: route.userId,
-              source: 'keyword',
+              source: 'handoff',
+              depth: nextDepth,
             });
           }
+        } else if (handoffDetector && currentDepth >= maxDepth) {
+          logger?.info('Handoff chain limit reached, stopping', {
+            bot: route.target,
+            depth: currentDepth,
+          });
         }
 
         // 대기열 처리

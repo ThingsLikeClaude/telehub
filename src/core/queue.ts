@@ -4,7 +4,8 @@ export interface RouteResult {
   chatId: number;
   messageId: number;
   userId: number;
-  source: 'keyword' | 'reply' | 'broadcast';
+  source: 'keyword' | 'reply' | 'broadcast' | 'handoff';
+  depth?: number;  // 핸드오프 체인 깊이 (0=유저 직접, 1=첫 핸드오프, ...)
 }
 
 export interface QueueManager {

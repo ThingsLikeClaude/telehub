@@ -27,6 +27,7 @@ const HubConfigSchema = z.object({
     longResponseThreshold: z.number().default(3000),
     pollingInterval: z.number().default(300),
     maxConcurrentBots: z.number().default(4),
+    maxHandoffDepth: z.number().default(3),
   }),
 });
 
