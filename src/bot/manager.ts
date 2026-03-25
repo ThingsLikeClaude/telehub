@@ -446,28 +446,25 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
         // Status 바 추가
         if (config.settings.showStatus && currentMsgId && sender) {
           const usage = result.usage;
-          const totalTokens = usage
-            ? (usage.input_tokens ?? 0) + (usage.output_tokens ?? 0) + (usage.cache_read_input_tokens ?? 0) + (usage.cache_creation_input_tokens ?? 0)
+          // context = input tokens + cache (output은 context window 아님)
+          const contextTokens = usage
+            ? (usage.input_tokens ?? 0) + (usage.cache_read_input_tokens ?? 0) + (usage.cache_creation_input_tokens ?? 0)
             : 0;
-          const maxContext = 200000; // Opus/Sonnet default
-          const contextPct = totalTokens > 0 ? Math.round((totalTokens / maxContext) * 100) : 0;
+          const maxContext = 200000;
+          const contextPct = contextTokens > 0 ? Math.round((contextTokens / maxContext) * 100) : 0;
 
           let gitBranch = '';
           try {
-            gitBranch = execSync('git rev-parse --abbrev-ref HEAD', { cwd: projectBotDir, stdio: ['pipe', 'pipe', 'pipe'] }).toString().trim();
+            gitBranch = execSync('git rev-parse --abbrev-ref HEAD', { cwd: projectBaseDir, stdio: ['pipe', 'pipe', 'pipe'] }).toString().trim();
           } catch { gitBranch = '-'; }
 
           const shortSession = result.sessionId?.slice(0, 8) ?? '-';
-          const modelName = result.model ?? state.config.model ?? 'opus';
+          const rawModel = result.model ?? state.config.model ?? 'opus';
+          // claude-opus-4-6 → opus-4-6, claude-sonnet-4-6 → sonnet-4-6
+          const modelShort = rawModel.replace(/^claude-/, '');
+          const modelLabel = `${modelShort}[${Math.round(maxContext / 1000)}K]`;
 
-          const statusLine = [
-            `───`,
-            `📌 ${currentProject}`,
-            `🔀 ${gitBranch}`,
-            `🤖 ${modelName}`,
-            `📊 ${contextPct}%`,
-            `🔑 ${shortSession}`,
-          ].join(' · ');
+          const statusLine = `${currentProject} · ${gitBranch} · ${modelLabel} · ctx ${contextPct}% · ${shortSession}`;
 
           currentMsgText += `\n\n${statusLine}`;
           await flushCurrentMsg();
