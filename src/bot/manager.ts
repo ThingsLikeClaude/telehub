@@ -163,6 +163,7 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
 
       // Telegram 실시간 업데이트 (300ms debounce editMessage)
       let telegramMsgId: number | null = null;
+      let sendingFirst = false;  // 첫 메시지 전송 중 잠금
       let textBuffer = '';
       let editTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -182,14 +183,15 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
           textBuffer += event.content;
 
           if (sender) {
-            // 첫 텍스트: 새 메시지 생성
-            if (!telegramMsgId) {
+            if (!telegramMsgId && !sendingFirst) {
+              // 첫 텍스트: 새 메시지 생성 (잠금으로 중복 방지)
+              sendingFirst = true;
               sender.sendMessage(route.chatId, textBuffer, {
                 replyToMessageId: route.messageId,
               }).then((msgId) => {
                 telegramMsgId = msgId;
               });
-            } else {
+            } else if (telegramMsgId) {
               // 이후: debounce editMessage
               if (editTimer) clearTimeout(editTimer);
               editTimer = setTimeout(flushEdit, EDIT_DEBOUNCE_MS);
@@ -203,10 +205,26 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
 
         // 마지막 편집 flush
         if (editTimer) clearTimeout(editTimer);
-        await flushEdit();
 
-        // Fallback: 스트리밍 중 메시지를 못 보냈으면 최종 출력 전송
-        if (!telegramMsgId && sender) {
+        // sendingFirst가 true면 첫 메시지 전송이 완료될 때까지 잠깐 대기
+        if (sendingFirst && !telegramMsgId) {
+          await new Promise<void>((resolve) => {
+            const check = setInterval(() => {
+              if (telegramMsgId || !sendingFirst) {
+                clearInterval(check);
+                resolve();
+              }
+            }, 50);
+            // 최대 2초 대기
+            setTimeout(() => { clearInterval(check); resolve(); }, 2000);
+          });
+        }
+
+        if (telegramMsgId) {
+          // 스트리밍 메시지가 있으면 최종 편집으로 마무리
+          await flushEdit();
+        } else if (sender) {
+          // 스트리밍이 완전히 실패한 경우만 fallback
           if (result.output) {
             logger?.info('Sending fallback response', { bot: route.target, outputLen: result.output.length });
             await sender.sendMessage(route.chatId, result.output, {
