@@ -60,7 +60,7 @@
       "token": "8612547027:AAHldfVavxJsEruS8Lbve7vEefQR4wludec"
     }
   ],
-  "botTemplateDir": "../../bots",
+  "botTemplateDir": "./bots",
   "projects": {
     "default": "general",
     "baseDir": "../../projects"
