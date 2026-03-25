@@ -110,6 +110,11 @@ async function main(): Promise<void> {
       return;
     }
 
+    if (parsed.type === 'inline_cmd') {
+      handleInlineCommand(parsed.botName, parsed.command, parsed.args, msg.chatId);
+      return;
+    }
+
     const route = router.route(parsed);
 
     if (parsed.type === 'multi') {
