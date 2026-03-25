@@ -36,6 +36,7 @@ export function createRouter(bots: BotConfig[], logger?: Logger): Router {
         case 'multi':
         case 'broadcast':
         case 'system':
+        case 'inline_cmd':
         case 'ignore':
           return null;
       }
