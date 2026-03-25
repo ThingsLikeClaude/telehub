@@ -462,7 +462,7 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
           const contextTokens = usage
             ? (usage.input_tokens ?? 0) + (usage.cache_read_input_tokens ?? 0) + (usage.cache_creation_input_tokens ?? 0)
             : 0;
-          const maxContext = 200000;
+          const maxContext = 1000000; // Claude CLI default: 1M
           const contextPct = contextTokens > 0 ? Math.round((contextTokens / maxContext) * 100) : 0;
 
           let gitBranch = '';
@@ -473,7 +473,9 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
           const shortSession = result.sessionId?.slice(0, 8) ?? '-';
           const rawModel = result.model ?? state.config.model ?? 'opus';
           const modelShort = rawModel.replace(/^claude-/, '');
-          const modelLabel = `${modelShort}[${Math.round(maxContext / 1000)}K]`;
+          const modelLabel = maxContext >= 1000000
+            ? `${modelShort}[${Math.round(maxContext / 1000000)}M]`
+            : `${modelShort}[${Math.round(maxContext / 1000)}K]`;
 
           const statusLine = `${currentProject} · ${gitBranch} · ${modelLabel} · ctx ${contextPct}% · ${shortSession}`;
 
