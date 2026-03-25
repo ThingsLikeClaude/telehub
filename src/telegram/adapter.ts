@@ -71,6 +71,14 @@ export function createTelegramAdapter(
     start() {
       bot.startPolling();
       bot.on('message', (raw) => {
+        logger.debug('Raw Telegram message', {
+          chatId: raw.chat.id,
+          text: raw.text?.slice(0, 50),
+          hasReplyTo: !!raw.reply_to_message,
+          replyToFrom: raw.reply_to_message?.from?.username,
+          replyToIsBot: raw.reply_to_message?.from?.is_bot,
+          replyToMsgId: raw.reply_to_message?.message_id,
+        });
         const msg = normalize(raw);
         if (!msg) return;
         for (const handler of handlers) {
