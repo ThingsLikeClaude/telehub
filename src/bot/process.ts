@@ -42,6 +42,7 @@ export function spawnBotProcess(options: SpawnOptions): BotProcess {
     ...(botConfig.systemPrompt ? ['--append-system-prompt', botConfig.systemPrompt] : []),
     ...(sessionId ? ['--resume', sessionId] : []),
     ...(projectDir ? ['--add-dir', projectDir] : []),
+    '--',      // 옵션 끝, 이후는 positional argument
     message,
   ];
 
