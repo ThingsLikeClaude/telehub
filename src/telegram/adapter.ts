@@ -99,11 +99,22 @@ export function createTelegramAdapter(
       const parts = splitMessage(text);
       let lastMessageId = 0;
       for (const part of parts) {
-        const sent = await bot.sendMessage(chatId, part, {
-          reply_to_message_id: options?.replyToMessageId,
-          parse_mode: options?.parseMode,
-        });
-        lastMessageId = sent.message_id;
+        try {
+          const sent = await bot.sendMessage(chatId, part, {
+            reply_to_message_id: options?.replyToMessageId,
+            parse_mode: options?.parseMode,
+          });
+          lastMessageId = sent.message_id;
+        } catch (err) {
+          if (options?.replyToMessageId && String(err).includes('replied')) {
+            const sent = await bot.sendMessage(chatId, part, {
+              parse_mode: options?.parseMode,
+            });
+            lastMessageId = sent.message_id;
+          } else {
+            logger.error('sendMessage failed', { error: String(err) });
+          }
+        }
       }
       return lastMessageId;
     },

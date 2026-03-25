@@ -108,8 +108,12 @@ async function main(): Promise<void> {
       botLog.info('Broadcast received, classifying...', { text: parsed.text });
       router.routeBroadcast(parsed).then(async (routes) => {
         for (const r of routes) {
-          await botManager.dispatch(r);
+          await botManager.dispatch(r).catch((err) => {
+            botLog.error('Dispatch error', { error: String(err) });
+          });
         }
+      }).catch((err) => {
+        botLog.error('Broadcast classification error', { error: String(err) });
       });
       return;
     }
@@ -117,7 +121,9 @@ async function main(): Promise<void> {
     if (!route) return;
 
     botLog.info('Routing message', { target: route.target, source: route.source });
-    botManager.dispatch(route);
+    botManager.dispatch(route).catch((err) => {
+      botLog.error('Dispatch error', { error: String(err) });
+    });
   });
 
   async function handleSystemCommand(

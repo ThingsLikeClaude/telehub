@@ -34,8 +34,16 @@ export function createBotSender(token: string, logger: Logger): BotSender {
           });
           lastMessageId = sent.message_id;
         } catch (err) {
-          logger.error('BotSender sendMessage failed', { error: String(err) });
-          throw err;
+          // reply_to 실패 시 reply 없이 재시도
+          if (options?.replyToMessageId && String(err).includes('replied')) {
+            const sent = await bot.sendMessage(chatId, part, {
+              parse_mode: options?.parseMode,
+            });
+            lastMessageId = sent.message_id;
+          } else {
+            logger.error('BotSender sendMessage failed', { error: String(err) });
+            throw err;
+          }
         }
       }
       return lastMessageId;
