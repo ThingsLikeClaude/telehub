@@ -15,6 +15,7 @@ export interface BotSender {
   sendMessage(chatId: number, text: string, options?: SendOptions): Promise<number>;
   sendFile(chatId: number, filePath: string, caption?: string): Promise<number>;
   editMessage(chatId: number, messageId: number, text: string): Promise<void>;
+  sendTyping(chatId: number): Promise<void>;
   getUsername(): Promise<string>;
 }
 
@@ -62,6 +63,14 @@ export function createBotSender(token: string, logger: Logger): BotSender {
         });
       } catch {
         // edit 실패 무시 (메시지 삭제됐거나 변경 없음)
+      }
+    },
+
+    async sendTyping(chatId) {
+      try {
+        await bot.sendChatAction(chatId, 'typing');
+      } catch {
+        // typing 실패 무시
       }
     },
 

@@ -125,8 +125,16 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
       // 발신용 sender 결정: 개별 토큰 > Hub telegram fallback
       const sender = botSenders.get(route.target) ?? telegram;
 
-      // 봇 실행
+      // 봇 실행 — "생각하는 중" 메시지 (점 애니메이션)
       setBotStatus(route.target, 'busy', route.text.slice(0, 50));
+      let thinkingMsgId: number | null = null;
+      let dotCount = 1;
+
+      if (sender) {
+        sender.sendMessage(route.chatId, '생각하는 중 .').then((msgId) => {
+          thinkingMsgId = msgId;
+        });
+      }
 
       const projectDir = `${config.projects.baseDir}/${currentProject}`;
       const workDir = `${projectDir}/${state.config.workDir}`;
@@ -176,6 +184,15 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
         }
       };
 
+      // "생각하는 중" 점 애니메이션 (. → .. → ... → .... → ..... → . 반복)
+      const thinkingInterval = setInterval(() => {
+        dotCount = (dotCount % 5) + 1;
+        const dots = '.'.repeat(dotCount);
+        if (thinkingMsgId && sender) {
+          sender.editMessage(route.chatId, thinkingMsgId, `생각하는 중 ${dots}`);
+        }
+      }, 1000);
+
       proc.onEvent((event: StreamEvent) => {
         healthMonitor?.recordActivity(route.target);
 
@@ -201,6 +218,11 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
       });
 
       proc.onComplete(async (result) => {
+        clearInterval(thinkingInterval);
+        // "생각하는 중" 메시지 삭제
+        if (thinkingMsgId && telegram) {
+          telegram.deleteMessage(route.chatId, thinkingMsgId);
+        }
         healthMonitor?.stopMonitoring(route.target);
 
         // 마지막 편집 flush
@@ -281,6 +303,11 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
       });
 
       proc.onError(async (error) => {
+        clearInterval(thinkingInterval);
+        // "생각하는 중" 메시지 삭제
+        if (thinkingMsgId && telegram) {
+          telegram.deleteMessage(route.chatId, thinkingMsgId);
+        }
         if (editTimer) clearTimeout(editTimer);
 
         // --resume 실패 시 세션 삭제 후 재시도
