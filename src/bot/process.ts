@@ -213,10 +213,12 @@ export function parseStreamLine(line: string): StreamEvent | null {
     event.costUsd = parsed.cost_usd as number;
   }
 
-  // 텍스트 추출 — 모든 가능한 필드를 시도
-  const content = extractTextContent(parsed);
-  if (content) {
-    event.content = content;
+  // 텍스트 추출 — result 이벤트는 제외 (이미 스트리밍으로 누적된 텍스트와 중복)
+  if (type !== 'result') {
+    const content = extractTextContent(parsed);
+    if (content) {
+      event.content = content;
+    }
   }
 
   return event;
