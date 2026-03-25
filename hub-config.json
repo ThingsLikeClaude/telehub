@@ -60,10 +60,10 @@
       "token": "8612547027:AAHldfVavxJsEruS8Lbve7vEefQR4wludec"
     }
   ],
-  "botTemplateDir": "./bots",
+  "botTemplateDir": "/Users/wavetablestudio/dev/telehub/bots",
   "projects": {
     "default": "general",
-    "baseDir": "./projects"
+    "baseDir": "/Users/wavetablestudio/dev/telehub/projects"
   },
   "settings": {
     "healthTimeoutMs": 180000,
