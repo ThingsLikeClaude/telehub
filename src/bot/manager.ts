@@ -176,22 +176,40 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
       healthMonitor?.startMonitoring(route.target);
       healthMonitor?.recordActivity(route.target);
 
-      // Telegram 실시간 업데이트 (300ms debounce editMessage)
-      let telegramMsgId: number | null = null;
-      let sendingFirst = false;  // 첫 메시지 전송 중 잠금
-      let textBuffer = '';
+      // Telegram 메시지 관리 — 단락(\n\n) 단위로 새 메시지 전송
+      let currentMsgId: number | null = null;
+      let currentMsgText = '';
+      let pendingText = '';         // 아직 전송되지 않은 텍스트
+      let sendingMsg = false;       // 전송 중 잠금
       let editTimer: ReturnType<typeof setTimeout> | null = null;
+      let sentMessages: number[] = []; // 보낸 메시지 ID 목록
 
-      const flushEdit = async () => {
-        if (!sender || !telegramMsgId || !textBuffer) return;
+      const MSG_SPLIT_THRESHOLD = 500; // 이 길이 넘으면 다음 \n\n에서 분할
+
+      const flushCurrentMsg = async () => {
+        if (!sender || !currentMsgId || !currentMsgText) return;
         try {
-          await sender.editMessage(route.chatId, telegramMsgId, textBuffer);
+          await sender.editMessage(route.chatId, currentMsgId, currentMsgText);
         } catch {
           // edit 실패 무시
         }
       };
 
-      // "생각하는 중" 점 애니메이션 (. → .. → ... → .... → ..... → . 반복)
+      const startNewMessage = async (text: string) => {
+        if (!sender || sendingMsg) return;
+        sendingMsg = true;
+        try {
+          const msgId = await sender.sendMessage(route.chatId, text);
+          currentMsgId = msgId;
+          currentMsgText = text;
+          sentMessages.push(msgId);
+        } catch {
+          // 전송 실패 무시
+        }
+        sendingMsg = false;
+      };
+
+      // "생각하는 중" 점 애니메이션
       const thinkingInterval = setInterval(() => {
         dotCount = (dotCount % 5) + 1;
         const dots = '.'.repeat(dotCount);
@@ -204,32 +222,62 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
         healthMonitor?.recordActivity(route.target);
 
         if (event.content) {
-          textBuffer += event.content;
+          pendingText += event.content;
 
-          if (sender) {
-            if (!telegramMsgId && !sendingFirst) {
-              // 첫 텍스트: thinking 메시지를 응답으로 교체
-              sendingFirst = true;
-              clearInterval(thinkingInterval);
+          if (!sender) return;
 
-              if (thinkingMsgId) {
-                // thinking 메시지를 edit하여 응답으로 전환
-                telegramMsgId = thinkingMsgId;
-                thinkingMsgId = null;
-                sender.editMessage(route.chatId, telegramMsgId, textBuffer);
-              } else {
-                // thinking 메시지가 아직 안 만들어졌으면 새로 생성
-                sender.sendMessage(route.chatId, textBuffer, {
-                  replyToMessageId: route.messageId,
-                }).then((msgId) => {
-                  telegramMsgId = msgId;
-                });
-              }
-            } else if (telegramMsgId) {
-              // 이후: debounce editMessage
-              if (editTimer) clearTimeout(editTimer);
-              editTimer = setTimeout(flushEdit, EDIT_DEBOUNCE_MS);
+          // 첫 텍스트: thinking 메시지를 응답으로 교체
+          if (!currentMsgId && !sendingMsg) {
+            clearInterval(thinkingInterval);
+
+            if (thinkingMsgId) {
+              currentMsgId = thinkingMsgId;
+              currentMsgText = pendingText;
+              thinkingMsgId = null;
+              sentMessages.push(currentMsgId);
+              sender.editMessage(route.chatId, currentMsgId, currentMsgText);
+              pendingText = '';
+            } else {
+              sendingMsg = true;
+              sender.sendMessage(route.chatId, pendingText).then((msgId) => {
+                currentMsgId = msgId;
+                currentMsgText = pendingText;
+                sentMessages.push(msgId);
+                pendingText = '';
+                sendingMsg = false;
+              });
             }
+            return;
+          }
+
+          // 단락 분할: \n\n이 있고 현재 메시지가 threshold 넘으면 새 메시지
+          if (currentMsgId && currentMsgText.length > MSG_SPLIT_THRESHOLD) {
+            const splitIdx = pendingText.indexOf('\n\n');
+            if (splitIdx !== -1) {
+              // 현재 메시지에 splitIdx까지 추가하고 edit
+              const beforeSplit = pendingText.slice(0, splitIdx);
+              const afterSplit = pendingText.slice(splitIdx + 2);
+              currentMsgText += beforeSplit;
+              flushCurrentMsg();
+
+              // 나머지는 새 메시지로
+              pendingText = afterSplit;
+              currentMsgId = null;
+              currentMsgText = '';
+              if (pendingText.trim()) {
+                startNewMessage(pendingText);
+                pendingText = '';
+              }
+              return;
+            }
+          }
+
+          // 일반: 현재 메시지에 추가 + debounce edit
+          if (currentMsgId) {
+            currentMsgText += pendingText;
+            pendingText = '';
+            if (editTimer) clearTimeout(editTimer);
+            editTimer = setTimeout(flushCurrentMsg, EDIT_DEBOUNCE_MS);
           }
         }
       });
@@ -241,25 +289,33 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
         // 마지막 편집 flush
         if (editTimer) clearTimeout(editTimer);
 
-        // sendingFirst가 true면 첫 메시지 전송이 완료될 때까지 잠깐 대기
-        if (sendingFirst && !telegramMsgId) {
+        // 전송 중이면 대기
+        if (sendingMsg) {
           await new Promise<void>((resolve) => {
             const check = setInterval(() => {
-              if (telegramMsgId || !sendingFirst) {
-                clearInterval(check);
-                resolve();
-              }
+              if (!sendingMsg) { clearInterval(check); resolve(); }
             }, 50);
-            // 최대 2초 대기
             setTimeout(() => { clearInterval(check); resolve(); }, 2000);
           });
         }
 
-        if (telegramMsgId) {
-          // 스트리밍 메시지가 있으면 최종 편집으로 마무리
-          await flushEdit();
+        // 남은 pendingText 처리
+        if (pendingText.trim() && currentMsgId) {
+          currentMsgText += pendingText;
+          pendingText = '';
+          await flushCurrentMsg();
+        }
+
+        if (sentMessages.length > 0) {
+          // 마지막 메시지 최종 편집
+          await flushCurrentMsg();
+
+          // 남은 텍스트가 있으면 새 메시지
+          if (pendingText.trim() && sender) {
+            await sender.sendMessage(route.chatId, pendingText);
+          }
         } else if (sender) {
-          // 스트리밍이 완전히 실패한 경우 — thinking 메시지를 응답으로 교체
+          // 스트리밍 메시지가 하나도 없는 경우 — fallback
           const fallbackText = result.output || '⚠️ 응답이 비어있습니다. 다시 시도해주세요.';
           if (result.output) {
             logger?.info('Sending fallback response', { bot: route.target, outputLen: result.output.length });
