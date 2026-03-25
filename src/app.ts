@@ -169,8 +169,8 @@ async function main(): Promise<void> {
       case 'status': {
         const bots = botManager.getAllBots().map((b) => ({
           name: b.name,
-          role: b.config.role,
-          color: b.config.color,
+          role: b.config?.role ?? 'unknown',
+          color: b.config?.color ?? '🤖',
           status: b.status,
           currentTask: b.currentTask,
         }));

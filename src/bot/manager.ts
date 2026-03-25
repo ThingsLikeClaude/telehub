@@ -364,11 +364,10 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
           sessionStore.set(currentProject, route.target, result.sessionId);
         }
 
-        setBotStatus(route.target, 'idle');
-        botStates.set(route.target, {
-          ...botStates.get(route.target)!,
-          process: null,
-        });
+        const completedState = botStates.get(route.target);
+        if (completedState) {
+          botStates.set(route.target, { ...completedState, status: 'idle', currentTask: undefined, process: null });
+        }
 
         eventBus.emit({
           type: 'bot:complete',
@@ -420,11 +419,10 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
           return;
         }
 
-        setBotStatus(route.target, 'error');
-        botStates.set(route.target, {
-          ...botStates.get(route.target)!,
-          process: null,
-        });
+        const erroredState = botStates.get(route.target);
+        if (erroredState) {
+          botStates.set(route.target, { ...erroredState, status: 'error', currentTask: undefined, process: null });
+        }
 
         eventBus.emit({ type: 'bot:error', bot: route.target, error: error.message });
         logger?.error('Bot error', { bot: route.target, error: error.message });
