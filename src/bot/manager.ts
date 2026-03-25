@@ -163,7 +163,7 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
       if (!existsSync(join(projectBaseDir, '.git'))) {
         mkdirSync(projectBaseDir, { recursive: true });
         try {
-          execSync('git init', { cwd: projectBaseDir, stdio: 'ignore' });
+          execSync('git init && git add -A && git commit -m "init project" --allow-empty', { cwd: projectBaseDir, stdio: 'ignore' });
         } catch { /* ignore */ }
         if (!existsSync(join(projectBaseDir, 'CLAUDE.md'))) {
           writeFileSync(join(projectBaseDir, 'CLAUDE.md'), `# ${currentProject}\n\n이 프로젝트의 작업 공간입니다. 한국어로 답변하세요.\n`);
@@ -654,6 +654,10 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
           logger?.warn('Failed to git init project dir', { dir: projectBaseDir });
         }
       }
+      // CLAUDE.md 생성 후 초기 커밋 (branch 표시용)
+      const needsInitialCommit = existsSync(join(projectBaseDir, '.git'))
+        && !existsSync(join(projectBaseDir, '.git', 'refs', 'heads', 'main'))
+        && !existsSync(join(projectBaseDir, '.git', 'refs', 'heads', 'master'));
       if (!existsSync(join(projectBaseDir, 'CLAUDE.md'))) {
         writeFileSync(
           join(projectBaseDir, 'CLAUDE.md'),
@@ -697,6 +701,13 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
       // 세션도 초기화
       if (created.length > 0) {
         sessionStore.deleteAll(currentProject);
+      }
+
+      // 초기 커밋 (git branch가 표시되려면 최소 1 커밋 필요)
+      if (needsInitialCommit) {
+        try {
+          execSync('git add -A && git commit -m "init project"', { cwd: projectBaseDir, stdio: 'ignore' });
+        } catch { /* ignore */ }
       }
 
       return { created, skipped };
