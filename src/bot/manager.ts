@@ -131,9 +131,11 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
       let dotCount = 1;
 
       if (sender) {
-        sender.sendMessage(route.chatId, '생각하는 중 .').then((msgId) => {
-          thinkingMsgId = msgId;
-        });
+        try {
+          thinkingMsgId = await sender.sendMessage(route.chatId, '생각하는 중 .');
+        } catch {
+          // thinking 메시지 실패해도 진행
+        }
       }
 
       // 봇 고정 홈 디렉토리 (CLAUDE.md, .claude/ 등 유지)
