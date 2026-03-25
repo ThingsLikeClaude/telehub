@@ -402,6 +402,27 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
           }
         }
 
+        // 파일 첨부 감지: [file:/path/to/file] 또는 [file:/path caption텍스트]
+        const filePattern = /\[file:([^\]\s]+)(?:\s+([^\]]*))?\]/g;
+        let fileMatch: RegExpExecArray | null;
+        while ((fileMatch = filePattern.exec(result.output)) !== null) {
+          const [, filePath, caption] = fileMatch;
+          const resolvedPath = filePath.startsWith('/')
+            ? filePath
+            : join(projectBotDir, filePath);
+          if (existsSync(resolvedPath) && sender) {
+            try {
+              const msgId = await sender.sendFile(route.chatId, resolvedPath, caption);
+              onMessageSent?.(msgId);
+              logger?.info('File sent', { bot: route.target, file: resolvedPath });
+            } catch (err) {
+              logger?.warn('File send failed', { bot: route.target, file: resolvedPath, error: String(err) });
+            }
+          } else if (!existsSync(resolvedPath)) {
+            logger?.warn('File not found', { bot: route.target, file: resolvedPath });
+          }
+        }
+
         // 세션 저장
         if (result.sessionId) {
           sessionStore.set(currentProject, route.target, result.sessionId);
