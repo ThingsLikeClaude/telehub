@@ -323,6 +323,32 @@ async function main(): Promise<void> {
         ].join('\n'));
         break;
       }
+      case 'help': {
+        const helpText = [
+          '📖 TeleHub 명령어',
+          '',
+          '🤖 봇 호출:',
+          '  ;이름 메시지 — 봇에게 말하기',
+          '  ;얘들아 메시지 — 전체 브로드캐스트',
+          '  ;이름1 ;이름2 — 멀티봇 호출',
+          '  답장 — 봇 메시지에 답장으로 이어서',
+          '',
+          '⚙️ 시스템:',
+          '  /status — 봇 상태',
+          '  /project — 현재 프로젝트',
+          '  /switch 이름 — 프로젝트 전환',
+          '  /init — 봇 초기화',
+          '  /prj-reset — 프로젝트 리셋',
+          '  /session — 세션 정보',
+          '  /clear 이름 — 봇 세션 초기화',
+          '  /clearall — 전체 세션 초기화',
+          '  /purge [n] — 메시지 삭제',
+          '  /stop — 활성 작업 종료',
+          '  /help — 이 도움말',
+        ].join('\n');
+        await telegram.sendMessage(chatId, helpText);
+        break;
+      }
     }
   }
 
@@ -375,8 +401,9 @@ async function main(): Promise<void> {
   });
   configWatcher.start();
 
-  // 9. Start polling
+  // 9. Start polling + register commands
   telegram.start();
+  telegram.registerCommands();
 
   // 10. Graceful shutdown
   const shutdown = async () => {

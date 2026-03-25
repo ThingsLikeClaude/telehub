@@ -385,8 +385,9 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
             await sender.sendMessage(route.chatId, pendingText);
           }
         } else if (sender) {
-          // 스트리밍 메시지가 하나도 없는 경우 — fallback
-          const fallbackText = result.output || '⚠️ 응답이 비어있습니다. 다시 시도해주세요.';
+          // 스트리밍 중 메시지 전송이 안 된 경우 — fallback
+          // (tool_use 중 텍스트가 늦게 도착하거나, edit 실패 등)
+          const fallbackText = (pendingText.trim() || result.output || '⚠️ 응답이 비어있습니다.').trim();
           if (result.output) {
             logger?.info('Sending fallback response', { bot: route.target, outputLen: result.output.length });
           } else {

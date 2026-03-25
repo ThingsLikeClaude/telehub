@@ -23,6 +23,7 @@ export interface SendOptions {
 export interface TelegramAdapter {
   start(): void;
   stop(): Promise<void>;
+  registerCommands(): Promise<void>;
   onMessage(handler: (msg: TelegramMessage) => void): void;
   sendMessage(chatId: number, text: string, options?: SendOptions): Promise<number>;
   sendFile(chatId: number, filePath: string, caption?: string): Promise<number>;
@@ -97,6 +98,27 @@ export function createTelegramAdapter(
     async stop() {
       await bot.stopPolling();
       logger.info('Telegram polling stopped');
+    },
+
+    async registerCommands() {
+      try {
+        await bot.setMyCommands([
+          { command: 'help', description: '명령어 목록' },
+          { command: 'status', description: '봇 상태 대시보드' },
+          { command: 'project', description: '현재 프로젝트 정보' },
+          { command: 'switch', description: '프로젝트 전환 (/switch 이름)' },
+          { command: 'init', description: '봇 초기화 (템플릿 복사)' },
+          { command: 'prj_reset', description: '프로젝트 리셋 (삭제 후 재생성)' },
+          { command: 'session', description: '세션 정보' },
+          { command: 'clear', description: '봇 세션 초기화 (/clear 이름)' },
+          { command: 'clearall', description: '전체 세션 초기화' },
+          { command: 'purge', description: '채팅 메시지 삭제' },
+          { command: 'stop', description: '활성 작업 종료' },
+        ]);
+        logger.info('Telegram commands registered');
+      } catch (err) {
+        logger.warn('Failed to register commands', { error: String(err) });
+      }
     },
 
     onMessage(handler) {
