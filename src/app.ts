@@ -243,6 +243,18 @@ async function main(): Promise<void> {
         await telegram.sendMessage(chatId, '🗑️ 전체 세션 초기화 완료');
         break;
       }
+      case '봇초기화': {
+        const current = botManager.getCurrentProject();
+        await botManager.clearAllSessions();
+        const { created, skipped } = botManager.initBots();
+        const lines = [
+          `🔧 봇 초기화 완료 (프로젝트: ${current})`,
+          ...(created.length > 0 ? [`✅ 생성: ${created.join(', ')}`] : []),
+          ...(skipped.length > 0 ? [`⏭️ 이미 존재: ${skipped.join(', ')}`] : []),
+        ];
+        await telegram.sendMessage(chatId, lines.join('\n'));
+        break;
+      }
       case '끝': {
         await telegram.sendMessage(chatId, '✅ 활성 작업 종료');
         break;

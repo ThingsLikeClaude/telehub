@@ -25,6 +25,7 @@ export interface BotManager {
   clearSession(botName: string): Promise<void>;
   clearAllSessions(): Promise<void>;
   switchProject(projectName: string): Promise<void>;
+  initBots(): { created: string[]; skipped: string[] };
   getCurrentProject(): string;
   shutdown(): Promise<void>;
 }
@@ -461,6 +462,39 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
         botStates.set(name, { ...state, status: 'idle', currentTask: undefined, process: null });
       }
       currentProject = projectName;
+    },
+
+    initBots() {
+      const created: string[] = [];
+      const skipped: string[] = [];
+      const projectBaseDir = `${config.projects.baseDir}/${currentProject}`;
+
+      for (const botConfig of config.bots) {
+        const projectBotDir = join(projectBaseDir, 'bots', botConfig.workDir);
+
+        if (existsSync(projectBotDir)) {
+          skipped.push(botConfig.name);
+          continue;
+        }
+
+        const templateDir = config.botTemplateDir
+          ? join(config.botTemplateDir, botConfig.workDir)
+          : join(config.bots_home, botConfig.workDir);
+
+        if (existsSync(templateDir)) {
+          cpSync(templateDir, projectBotDir, { recursive: true });
+        } else {
+          mkdirSync(projectBotDir, { recursive: true });
+        }
+        created.push(botConfig.name);
+      }
+
+      // 세션도 초기화
+      if (created.length > 0) {
+        sessionStore.deleteAll(currentProject);
+      }
+
+      return { created, skipped };
     },
 
     getCurrentProject() {
