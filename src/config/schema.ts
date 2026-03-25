@@ -5,7 +5,7 @@ const BotConfigSchema = z.object({
   name: z.string().min(1),
   role: z.string().min(1),
   triggers: z.array(z.string()).min(1),
-  systemPrompt: z.string(),
+  systemPrompt: z.string().optional(),
   workDir: z.string(),
   color: z.string().default('🤖'),
   token: z.string().optional(),  // 개별 봇 토큰 (없으면 Hub 토큰 사용)

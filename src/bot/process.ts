@@ -38,7 +38,6 @@ export function spawnBotProcess(options: SpawnOptions): BotProcess {
     '--output-format', 'stream-json',
     '--dangerously-skip-permissions',
     '--verbose',
-    ...(botConfig.systemPrompt ? ['--append-system-prompt', botConfig.systemPrompt] : []),
     ...(sessionId ? ['--resume', sessionId] : []),
     '--',      // 옵션 끝, 이후는 positional argument
     message,

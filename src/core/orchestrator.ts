@@ -90,7 +90,7 @@ export function createOrchestrator(deps: OrchestratorDeps): Orchestrator {
     const model = config.settings.orchestratorModel ?? 'haiku';
 
     const raw = await runClaude(prompt, model);
-    logger.debug('Orchestrator raw response', { raw: raw.slice(0, 500) });
+    logger.info('Orchestrator raw response', { raw: raw.slice(0, 500) });
 
     // JSON 추출 (코드블록 안에 있을 수도 있으므로)
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
@@ -242,7 +242,11 @@ export function createOrchestrator(deps: OrchestratorDeps): Orchestrator {
 
       try {
         const plan = await createPlan(text);
-        logger.info('Orchestrator plan created', { type: plan.type, steps: plan.steps.length });
+        logger.info('Orchestrator plan created', {
+          type: plan.type,
+          steps: plan.steps.length,
+          detail: plan.steps.map((s) => `${s.id}:${s.bot}`).join(' → '),
+        });
 
         // thinking 메시지 삭제
         if (thinkingMsgId) {
