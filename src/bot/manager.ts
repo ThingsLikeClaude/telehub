@@ -443,10 +443,20 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
           }
         }
 
+        // Usage를 세션에 저장
+        if (result.usage) {
+          sessionStore.setUsage(currentProject, route.target, {
+            inputTokens: result.usage.input_tokens ?? 0,
+            outputTokens: result.usage.output_tokens ?? 0,
+            cacheReadTokens: result.usage.cache_read_input_tokens ?? 0,
+            cacheCreationTokens: result.usage.cache_creation_input_tokens ?? 0,
+          });
+        }
+
         // Status 바 추가
         if (config.settings.showStatus && currentMsgId && sender) {
           const usage = result.usage;
-          // context = input tokens + cache (output은 context window 아님)
+          // 세션의 context = input + cache (이전 턴 포함)
           const contextTokens = usage
             ? (usage.input_tokens ?? 0) + (usage.cache_read_input_tokens ?? 0) + (usage.cache_creation_input_tokens ?? 0)
             : 0;
@@ -460,7 +470,6 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
 
           const shortSession = result.sessionId?.slice(0, 8) ?? '-';
           const rawModel = result.model ?? state.config.model ?? 'opus';
-          // claude-opus-4-6 → opus-4-6, claude-sonnet-4-6 → sonnet-4-6
           const modelShort = rawModel.replace(/^claude-/, '');
           const modelLabel = `${modelShort}[${Math.round(maxContext / 1000)}K]`;
 
