@@ -39,7 +39,7 @@ describe('MessageParser', () => {
       expect(result).toEqual(expect.objectContaining({
         type: 'keyword',
         botName: '김제헌',
-        text: '제헌 조사해줘',
+        text: '조사해줘',
       }));
     });
 
@@ -48,7 +48,7 @@ describe('MessageParser', () => {
       expect(result.type).toBe('keyword');
       if (result.type === 'keyword') {
         expect(result.botName).toBe('김제헌');
-        expect(result.text).toBe('ㅈㅎ 뭐 좀 찾아줘');
+        expect(result.text).toBe('뭐 좀 찾아줘');
       }
     });
 
@@ -57,7 +57,7 @@ describe('MessageParser', () => {
       expect(result.type).toBe('keyword');
       if (result.type === 'keyword') {
         expect(result.botName).toBe('김제헌');
-        expect(result.text).toBe('제헌아 이거 해줘');
+        expect(result.text).toBe('이거 해줘');
       }
     });
 
