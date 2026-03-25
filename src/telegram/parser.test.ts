@@ -86,6 +86,24 @@ describe('MessageParser', () => {
       }
     });
 
+    it('should handle no-space trigger (#제헌아뭐해)', () => {
+      const result = parser.parse(makeMsg({ text: '#제헌아뭐해' }), botUsernames);
+      expect(result.type).toBe('keyword');
+      if (result.type === 'keyword') {
+        expect(result.botName).toBe('김제헌');
+        expect(result.text).toBe('뭐해');
+      }
+    });
+
+    it('should handle no-space with rest (#제헌아이거해줘)', () => {
+      const result = parser.parse(makeMsg({ text: '#제헌아이거해줘 빨리' }), botUsernames);
+      expect(result.type).toBe('keyword');
+      if (result.type === 'keyword') {
+        expect(result.botName).toBe('김제헌');
+        expect(result.text).toBe('이거해줘 빨리');
+      }
+    });
+
     it('should ignore unknown trigger', () => {
       const result = parser.parse(makeMsg({ text: '#모르는봇 해줘' }), botUsernames);
       expect(result.type).toBe('ignore');
