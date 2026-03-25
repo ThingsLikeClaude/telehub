@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "lastUpdated": "2026-03-25T02:30:44.088Z",
+  "lastUpdated": "2026-03-25T02:34:02.436Z",
   "activeFeatures": [
     "telehub",
     "config",
@@ -21,7 +21,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-24T08:04:03.817Z",
-        "lastUpdated": "2026-03-25T02:30:44.088Z"
+        "lastUpdated": "2026-03-25T02:34:02.436Z"
       },
       "lastFile": "d:\\vault\\1-projects\\claude-utils\\telehub\\src\\app.ts"
     },
@@ -47,9 +47,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-24T08:08:25.186Z",
-        "lastUpdated": "2026-03-25T01:37:13.788Z"
+        "lastUpdated": "2026-03-25T02:33:52.577Z"
       },
-      "lastFile": "D:\\vault\\1-projects\\claude-utils\\telehub\\src\\telegram\\parser.ts"
+      "lastFile": "d:\\vault\\1-projects\\claude-utils\\telehub\\src\\telegram\\bot-sender.ts"
     },
     "store": {
       "phase": "do",
@@ -73,7 +73,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-24T08:11:35.189Z",
-        "lastUpdated": "2026-03-25T02:30:35.747Z"
+        "lastUpdated": "2026-03-25T02:33:20.473Z"
       },
       "lastFile": "d:\\vault\\1-projects\\claude-utils\\telehub\\src\\bot\\manager.ts"
     },
@@ -112,7 +112,7 @@
   "session": {
     "startedAt": "2026-03-24T07:49:52.306Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-03-25T02:30:44.088Z"
+    "lastActivity": "2026-03-25T02:34:02.436Z"
   },
   "history": [
     {
@@ -1029,6 +1029,30 @@
     },
     {
       "timestamp": "2026-03-25T02:30:44.088Z",
+      "feature": "telehub",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-25T02:33:20.473Z",
+      "feature": "bot",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-25T02:33:45.496Z",
+      "feature": "telegram",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-25T02:33:52.577Z",
+      "feature": "telegram",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-25T02:34:02.436Z",
       "feature": "telehub",
       "phase": "do",
       "action": "updated"
