@@ -71,18 +71,20 @@ async function main(): Promise<void> {
     );
   });
 
-  // 6. Build bot username map (토큰 → getMe로 username 조회)
+  // 6. Build bot username map + sender pool (토큰 → getMe로 username 조회)
   const botUsernames = new Map<string, string>();
+  const allBotSenders: Array<{ name: string; sender: Awaited<ReturnType<typeof import('./telegram/bot-sender.js')['createBotSender']>> }> = [];
   for (const botConfig of config.bots) {
     if (botConfig.token) {
       try {
         const { createBotSender } = await import('./telegram/bot-sender.js');
-        const tempSender = createBotSender(botConfig.token, logger);
-        const username = await tempSender.getUsername();
+        const botSender = createBotSender(botConfig.token, logger);
+        const username = await botSender.getUsername();
         if (username) {
           botUsernames.set(username, botConfig.name);
           logger.info('Bot username resolved', { bot: botConfig.name, username });
         }
+        allBotSenders.push({ name: botConfig.name, sender: botSender });
       } catch (err) {
         logger.warn('Failed to resolve bot username', {
           bot: botConfig.name,
@@ -268,14 +270,22 @@ async function main(): Promise<void> {
         const limit = Math.min(Math.max(count, 1), 200);
         const confirmMsg = await telegram.sendMessage(chatId, `🗑️ 최근 ${limit}개 메시지 삭제 중...`);
         let deleted = 0;
-        // /purge 명령 자체 + 확인 메시지 포함해서 삭제
+
+        // 모든 봇 sender 수집 (Hub + 개별 봇)
+        const allSenders = [telegram, ...allBotSenders.map((b) => b.sender)];
+
         for (let id = confirmMsg; id > confirmMsg - limit - 2 && id > 0; id--) {
-          try {
-            await telegram.deleteMessage(chatId, id);
-            deleted++;
-          } catch {
-            // 이미 삭제되었거나 권한 없음 — 무시
+          let success = false;
+          for (const sender of allSenders) {
+            try {
+              await sender.deleteMessage(chatId, id);
+              success = true;
+              break; // 하나라도 성공하면 다음 메시지로
+            } catch {
+              // 다음 sender로 시도
+            }
           }
+          if (success) deleted++;
         }
         logger.info('Purge completed', { deleted, requested: limit });
         break;
