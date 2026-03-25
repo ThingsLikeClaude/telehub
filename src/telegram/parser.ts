@@ -13,12 +13,15 @@ export interface TelegramMessage {
 
 export type SystemCommand = '상태' | '프로젝트' | '전환' | '클리어' | '전체클리어' | '끝' | '세션';
 
+export type InlineCommand = 'clear' | 'session' | 'model';
+
 export type ParsedMessage =
   | { type: 'keyword'; botName: string; text: string; chatId: number; messageId: number; userId: number }
   | { type: 'multi'; botNames: string[]; text: string; chatId: number; messageId: number; userId: number }
   | { type: 'reply'; botName: string; text: string; chatId: number; messageId: number; userId: number }
   | { type: 'broadcast'; text: string; chatId: number; messageId: number; userId: number }
   | { type: 'system'; command: SystemCommand; args: string[]; chatId: number; messageId: number }
+  | { type: 'inline_cmd'; botName: string; command: InlineCommand; args: string[]; chatId: number; messageId: number }
   | { type: 'ignore' };
 
 export interface MessageParser {
