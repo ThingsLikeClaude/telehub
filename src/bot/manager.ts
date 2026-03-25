@@ -107,6 +107,17 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
         return;
       }
 
+      // 빈 메시지 방지
+      if (!route.text || !route.text.trim()) {
+        logger?.warn('Empty message, skipping dispatch', { bot: route.target });
+        return;
+      }
+
+      // 에러 상태 자동 복구
+      if (state.status === 'error') {
+        setBotStatus(route.target, 'idle');
+      }
+
       // 바쁘면 대기열에 추가
       if (state.status === 'busy') {
         const pos = queueManager.enqueue(route.target, route);
