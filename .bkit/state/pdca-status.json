@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "lastUpdated": "2026-03-25T02:34:02.436Z",
+  "lastUpdated": "2026-03-25T02:37:00.712Z",
   "activeFeatures": [
     "telehub",
     "config",
@@ -21,7 +21,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-24T08:04:03.817Z",
-        "lastUpdated": "2026-03-25T02:34:02.436Z"
+        "lastUpdated": "2026-03-25T02:36:52.323Z"
       },
       "lastFile": "d:\\vault\\1-projects\\claude-utils\\telehub\\src\\app.ts"
     },
@@ -86,9 +86,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-24T08:12:58.021Z",
-        "lastUpdated": "2026-03-25T01:38:59.474Z"
+        "lastUpdated": "2026-03-25T02:37:00.712Z"
       },
-      "lastFile": "D:\\vault\\1-projects\\claude-utils\\telehub\\src\\core\\router.ts"
+      "lastFile": "d:\\vault\\1-projects\\claude-utils\\telehub\\src\\core\\router.ts"
     },
     "monitor": {
       "phase": "do",
@@ -112,7 +112,7 @@
   "session": {
     "startedAt": "2026-03-24T07:49:52.306Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-03-25T02:34:02.436Z"
+    "lastActivity": "2026-03-25T02:37:00.712Z"
   },
   "history": [
     {
@@ -1054,6 +1054,18 @@
     {
       "timestamp": "2026-03-25T02:34:02.436Z",
       "feature": "telehub",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-25T02:36:52.323Z",
+      "feature": "telehub",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-25T02:37:00.712Z",
+      "feature": "core",
       "phase": "do",
       "action": "updated"
     }
