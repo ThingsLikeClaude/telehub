@@ -404,22 +404,42 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
 
         // 파일 첨부 감지: [file:/path/to/file] 또는 [file:/path caption텍스트]
         const filePattern = /\[file:([^\]\s]+)(?:\s+([^\]]*))?\]/g;
+        const fileMatches: Array<{ path: string; caption?: string }> = [];
         let fileMatch: RegExpExecArray | null;
         while ((fileMatch = filePattern.exec(result.output)) !== null) {
-          const [, filePath, caption] = fileMatch;
-          const resolvedPath = filePath.startsWith('/')
-            ? filePath
-            : join(projectBotDir, filePath);
-          if (existsSync(resolvedPath) && sender) {
+          const [, fp, cap] = fileMatch;
+          fileMatches.push({ path: fp.startsWith('/') ? fp : join(projectBotDir, fp), caption: cap });
+        }
+
+        for (const file of fileMatches) {
+          if (!existsSync(file.path)) {
+            logger?.warn('File not found', { bot: route.target, file: file.path });
+            continue;
+          }
+          if (!sender) continue;
+
+          // retry with delay for rate limit
+          for (let attempt = 0; attempt < 3; attempt++) {
             try {
-              const msgId = await sender.sendFile(route.chatId, resolvedPath, caption);
+              const msgId = await sender.sendFile(route.chatId, file.path, file.caption);
               onMessageSent?.(msgId);
-              logger?.info('File sent', { bot: route.target, file: resolvedPath });
+              logger?.info('File sent', { bot: route.target, file: file.path });
+              break;
             } catch (err) {
-              logger?.warn('File send failed', { bot: route.target, file: resolvedPath, error: String(err) });
+              const retryMatch = String(err).match(/retry after (\d+)/);
+              if (retryMatch && attempt < 2) {
+                const wait = (parseInt(retryMatch[1], 10) + 1) * 1000;
+                logger?.info('Rate limited, retrying file send', { bot: route.target, waitMs: wait });
+                await new Promise((r) => setTimeout(r, wait));
+              } else {
+                logger?.warn('File send failed', { bot: route.target, file: file.path, error: String(err) });
+                break;
+              }
             }
-          } else if (!existsSync(resolvedPath)) {
-            logger?.warn('File not found', { bot: route.target, file: resolvedPath });
+          }
+          // 파일 간 1초 딜레이 (rate limit 방지)
+          if (fileMatches.indexOf(file) < fileMatches.length - 1) {
+            await new Promise((r) => setTimeout(r, 1000));
           }
         }
 
