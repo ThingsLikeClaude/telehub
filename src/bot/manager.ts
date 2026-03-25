@@ -201,13 +201,23 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
 
           if (sender) {
             if (!telegramMsgId && !sendingFirst) {
-              // 첫 텍스트: 새 메시지 생성 (잠금으로 중복 방지)
+              // 첫 텍스트: thinking 메시지를 응답으로 교체
               sendingFirst = true;
-              sender.sendMessage(route.chatId, textBuffer, {
-                replyToMessageId: route.messageId,
-              }).then((msgId) => {
-                telegramMsgId = msgId;
-              });
+              clearInterval(thinkingInterval);
+
+              if (thinkingMsgId) {
+                // thinking 메시지를 edit하여 응답으로 전환
+                telegramMsgId = thinkingMsgId;
+                thinkingMsgId = null;
+                sender.editMessage(route.chatId, telegramMsgId, textBuffer);
+              } else {
+                // thinking 메시지가 아직 안 만들어졌으면 새로 생성
+                sender.sendMessage(route.chatId, textBuffer, {
+                  replyToMessageId: route.messageId,
+                }).then((msgId) => {
+                  telegramMsgId = msgId;
+                });
+              }
             } else if (telegramMsgId) {
               // 이후: debounce editMessage
               if (editTimer) clearTimeout(editTimer);
@@ -219,10 +229,6 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
 
       proc.onComplete(async (result) => {
         clearInterval(thinkingInterval);
-        // "생각하는 중" 메시지 삭제
-        if (thinkingMsgId && telegram) {
-          telegram.deleteMessage(route.chatId, thinkingMsgId);
-        }
         healthMonitor?.stopMonitoring(route.target);
 
         // 마지막 편집 flush
@@ -246,15 +252,20 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
           // 스트리밍 메시지가 있으면 최종 편집으로 마무리
           await flushEdit();
         } else if (sender) {
-          // 스트리밍이 완전히 실패한 경우만 fallback
+          // 스트리밍이 완전히 실패한 경우 — thinking 메시지를 응답으로 교체
+          const fallbackText = result.output || '⚠️ 응답이 비어있습니다. 다시 시도해주세요.';
           if (result.output) {
             logger?.info('Sending fallback response', { bot: route.target, outputLen: result.output.length });
-            await sender.sendMessage(route.chatId, result.output, {
-              replyToMessageId: route.messageId,
-            });
           } else {
             logger?.warn('Bot completed with empty output', { bot: route.target });
-            await sender.sendMessage(route.chatId, `⚠️ 응답이 비어있습니다. 다시 시도해주세요.`);
+          }
+
+          if (thinkingMsgId) {
+            await sender.editMessage(route.chatId, thinkingMsgId, fallbackText);
+          } else {
+            await sender.sendMessage(route.chatId, fallbackText, {
+              replyToMessageId: route.messageId,
+            });
           }
         }
 
@@ -304,10 +315,6 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
 
       proc.onError(async (error) => {
         clearInterval(thinkingInterval);
-        // "생각하는 중" 메시지 삭제
-        if (thinkingMsgId && telegram) {
-          telegram.deleteMessage(route.chatId, thinkingMsgId);
-        }
         if (editTimer) clearTimeout(editTimer);
 
         // --resume 실패 시 세션 삭제 후 재시도
@@ -327,7 +334,13 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
 
         eventBus.emit({ type: 'bot:error', bot: route.target, error: error.message });
         logger?.error('Bot error', { bot: route.target, error: error.message });
-        telegram?.sendMessage(route.chatId, `❌ ${route.target} 오류: ${error.message}`);
+        // thinking 메시지를 에러로 교체
+        const errText = `❌ 오류: ${error.message}`;
+        if (thinkingMsgId && sender) {
+          sender.editMessage(route.chatId, thinkingMsgId, errText);
+        } else {
+          telegram?.sendMessage(route.chatId, errText);
+        }
 
         // 대기열 처리
         await processNext(route.target);
