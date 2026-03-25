@@ -135,9 +135,9 @@ async function main(): Promise<void> {
     }
 
     if (parsed.type === 'broadcast') {
+      // 빈 텍스트 = 출석 호출 → 전원에게 기본 메시지 전달
       if (!parsed.text || !parsed.text.trim()) {
-        telegram.sendMessage(parsed.chatId, '사용법: #얘들아 [메시지]\n예: #얘들아 뭐해?');
-        return;
+        parsed.text = '팀장이 부르고 있어. 지금 뭐하고 있는지 간단히 한줄로 응답해.';
       }
       botLog.info('Broadcast received, classifying...', { text: parsed.text });
       router.routeBroadcast(parsed).then(async (routes) => {

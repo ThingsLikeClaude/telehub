@@ -127,7 +127,7 @@ function runClaudeOnce(prompt: string): Promise<string> {
   });
 }
 
-const GENERAL_PATTERNS = /^(안녕|ㅎㅇ|하이|뭐해|모해|뭐하|잘자|굿모닝|좋은아침|수고|고생|ㅋㅋ|ㅎㅎ|ㄱㄱ|hi|hello|hey|yo|sup)/i;
+const GENERAL_PATTERNS = /^(안녕|ㅎㅇ|하이|뭐해|모해|뭐하|잘자|굿모닝|좋은아침|수고|고생|ㅋㅋ|ㅎㅎ|ㄱㄱ|팀장|hi|hello|hey|yo|sup)/i;
 
 function isGeneralMessage(text: string): boolean {
   return GENERAL_PATTERNS.test(text.trim());
