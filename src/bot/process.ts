@@ -24,14 +24,15 @@ export interface BotProcess {
 
 export interface SpawnOptions {
   botConfig: BotConfig;
-  projectDir: string;
+  botHomeDir: string;     // 봇 고정 홈 (bots/김제헌/)
+  projectDir?: string;    // 현재 프로젝트 디렉토리 (--add-dir용)
   sessionId?: string;
   message: string;
   logger: Logger;
 }
 
 export function spawnBotProcess(options: SpawnOptions): BotProcess {
-  const { botConfig, projectDir, sessionId, message, logger } = options;
+  const { botConfig, botHomeDir, projectDir, sessionId, message, logger } = options;
 
   const args = [
     '-p',
@@ -40,14 +41,14 @@ export function spawnBotProcess(options: SpawnOptions): BotProcess {
     '--verbose',
     ...(botConfig.systemPrompt ? ['--append-system-prompt', botConfig.systemPrompt] : []),
     ...(sessionId ? ['--resume', sessionId] : []),
+    ...(projectDir ? ['--add-dir', projectDir] : []),
     message,
   ];
 
-  logger.debug('Spawning Claude CLI', { bot: botConfig.name, args: args.join(' ') });
+  logger.debug('Spawning Claude CLI', { bot: botConfig.name, cwd: botHomeDir, addDir: projectDir });
 
-  const workDir = `${projectDir}/${botConfig.workDir}`;
   const child: ChildProcess = spawn('claude', args, {
-    cwd: workDir,
+    cwd: botHomeDir,
     // stdin을 /dev/null로 리다이렉트 (stdin 대기 경고 방지)
     stdio: ['ignore', 'pipe', 'pipe'],
     env: { ...process.env },
