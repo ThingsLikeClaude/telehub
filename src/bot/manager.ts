@@ -410,6 +410,10 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
         // --resume 실패 시 세션 삭제 후 새 세션으로 재시도
         if (existingSessionId) {
           logger?.warn('Resume failed, retrying with new session', { bot: route.target });
+          // 고아 thinking 메시지 삭제
+          if (thinkingMsgId && sender) {
+            sender.deleteMessage(route.chatId, thinkingMsgId).catch(() => {});
+          }
           sessionStore.delete(currentProject, route.target);
           setBotStatus(route.target, 'idle');
           await manager.dispatch(route);

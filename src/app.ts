@@ -135,6 +135,10 @@ async function main(): Promise<void> {
     }
 
     if (parsed.type === 'broadcast') {
+      if (!parsed.text || !parsed.text.trim()) {
+        telegram.sendMessage(parsed.chatId, '사용법: #얘들아 [메시지]\n예: #얘들아 뭐해?');
+        return;
+      }
       botLog.info('Broadcast received, classifying...', { text: parsed.text });
       router.routeBroadcast(parsed).then(async (routes) => {
         for (const r of routes) {
