@@ -11,7 +11,7 @@ export interface TelegramMessage {
   date: number;
 }
 
-export type SystemCommand = 'status' | 'project' | 'switch' | 'clear' | 'clearall' | 'stop' | 'session' | 'init' | 'purge';
+export type SystemCommand = 'status' | 'project' | 'switch' | 'clear' | 'clearall' | 'stop' | 'session' | 'init' | 'purge' | 'prj-reset';
 
 export type InlineCommand = 'clear' | 'session' | 'model';
 
@@ -38,6 +38,7 @@ const SYSTEM_COMMANDS: ReadonlyMap<string, SystemCommand> = new Map([
   ['session', 'session'],
   ['init', 'init'],
   ['purge', 'purge'],
+  ['prj-reset', 'prj-reset'],
 ]);
 
 const INLINE_COMMANDS: ReadonlyMap<string, InlineCommand> = new Map([

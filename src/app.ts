@@ -295,6 +295,34 @@ async function main(): Promise<void> {
         logger.info('Purge completed', { deleted, tracked: idsToDelete.length });
         break;
       }
+      case 'prj-reset': {
+        const current = botManager.getCurrentProject();
+        const projectDir = `${config.projects.baseDir}/${current}`;
+        const { rmSync, existsSync: dirExists } = await import('node:fs');
+        const { resolve } = await import('node:path');
+
+        if (!dirExists(projectDir)) {
+          await telegram.sendMessage(chatId, `⚠️ 프로젝트 "${current}" 폴더가 없습니다.`);
+          break;
+        }
+
+        // 봇 프로세스 종료 + 세션 클리어
+        await botManager.clearAllSessions();
+
+        // 프로젝트 폴더 삭제
+        rmSync(projectDir, { recursive: true, force: true });
+        logger.info('Project directory deleted', { project: current, dir: resolve(projectDir) });
+
+        // 재생성 (git init + CLAUDE.md + 봇 템플릿 복사)
+        const { created } = botManager.initBots();
+
+        await telegram.sendMessage(chatId, [
+          `🔄 프로젝트 리셋 완료: ${current}`,
+          `📁 ${resolve(projectDir)}`,
+          `✅ 생성: ${created.join(', ')}`,
+        ].join('\n'));
+        break;
+      }
     }
   }
 
