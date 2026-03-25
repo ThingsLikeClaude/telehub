@@ -106,10 +106,18 @@ export function createMessageParser(triggerMap: Map<string, string>): MessagePar
         // 단일 트리거 매칭 (prefix 매칭 포함: #제헌아뭐해 → 제헌 + 뭐해)
         const triggerResult = matchTriggerFull(firstWord, triggerMap);
         if (triggerResult) {
-          // rest가 있으면 (붙어쓰기) 나머지 텍스트와 합침
           const restFromTrigger = triggerResult.rest;
           const restFromSpace = spaceIdx === -1 ? '' : withoutHash.slice(spaceIdx + 1).trim();
           const fullText = [restFromTrigger, restFromSpace].filter(Boolean).join(' ');
+
+          // 인라인 명령어 감지: #제헌 /clear, #제헌 /session 등
+          const firstToken = fullText.split(' ')[0];
+          const inlineCmd = INLINE_COMMANDS.get(firstToken);
+          if (inlineCmd) {
+            const cmdArgs = fullText.split(' ').slice(1);
+            return { type: 'inline_cmd', botName: triggerResult.botName, command: inlineCmd, args: cmdArgs, chatId: base.chatId, messageId: base.messageId };
+          }
+
           return { type: 'keyword', botName: triggerResult.botName, text: fullText || stripHashes(text), ...base };
         }
 
