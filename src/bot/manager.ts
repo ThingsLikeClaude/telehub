@@ -136,10 +136,16 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
         });
       }
 
+      // 봇 고정 홈 디렉토리 (CLAUDE.md, .claude/ 등 유지)
+      const botHomeDir = `${config.bots_home ?? './bots'}/${state.config.workDir}`;
+      if (!existsSync(botHomeDir)) {
+        mkdirSync(botHomeDir, { recursive: true });
+      }
+
+      // 프로젝트 디렉토리 (--add-dir로 접근)
       const projectDir = `${config.projects.baseDir}/${currentProject}`;
-      const workDir = `${projectDir}/${state.config.workDir}`;
-      if (!existsSync(workDir)) {
-        mkdirSync(workDir, { recursive: true });
+      if (!existsSync(projectDir)) {
+        mkdirSync(projectDir, { recursive: true });
       }
 
       const existingSessionId = sessionStore.get(currentProject, route.target) ?? undefined;
@@ -148,6 +154,7 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
       try {
         proc = spawnBotProcess({
           botConfig: state.config,
+          botHomeDir,
           projectDir,
           sessionId: existingSessionId,
           message: route.text,
