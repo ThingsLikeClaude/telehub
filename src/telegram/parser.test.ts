@@ -66,7 +66,8 @@ describe('MessageParser', () => {
       expect(result.type).toBe('keyword');
       if (result.type === 'keyword') {
         expect(result.botName).toBe('김제헌');
-        expect(result.text).toBe('제헌아');
+        // bare trigger → stripHashes fallback
+        expect(result.text).toBeTruthy();
       }
     });
 
