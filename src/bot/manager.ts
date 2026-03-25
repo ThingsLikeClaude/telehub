@@ -317,8 +317,8 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
         clearInterval(thinkingInterval);
         if (editTimer) clearTimeout(editTimer);
 
-        // --resume 실패 시 세션 삭제 후 재시도
-        if (existingSessionId && error.message.includes('resume')) {
+        // --resume 실패 시 세션 삭제 후 새 세션으로 재시도
+        if (existingSessionId) {
           logger?.warn('Resume failed, retrying with new session', { bot: route.target });
           sessionStore.delete(currentProject, route.target);
           setBotStatus(route.target, 'idle');
