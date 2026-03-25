@@ -83,6 +83,16 @@ export function spawnBotProcess(options: SpawnOptions): BotProcess {
         outputBuffer += event.content;
       }
 
+      // result 이벤트의 result 필드에서 텍스트 추출 (스트리밍이 없었을 때만)
+      if (event.type === 'result' && !event.content && outputBuffer.length === 0) {
+        const resultText = extractResultText(line);
+        if (resultText) {
+          outputBuffer = resultText;
+          // 핸들러에도 content로 전달
+          event.content = resultText;
+        }
+      }
+
       // sessionId 추출
       if (event.sessionId) {
         currentSessionId = event.sessionId;
