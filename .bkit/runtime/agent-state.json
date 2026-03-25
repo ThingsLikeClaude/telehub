@@ -1,14 +1,25 @@
 {
   "version": "1.0",
-  "enabled": false,
+  "enabled": true,
   "teamName": "",
   "feature": "telehub",
   "pdcaPhase": "do",
   "orchestrationPattern": "leader",
   "ctoAgent": "opus",
-  "startedAt": "2026-03-25T03:58:54.862Z",
-  "lastUpdated": "2026-03-25T04:01:53.369Z",
-  "teammates": [],
+  "startedAt": "2026-03-25T04:40:27.665Z",
+  "lastUpdated": "2026-03-25T04:40:27.668Z",
+  "teammates": [
+    {
+      "name": "a3ea6305e3eacd302",
+      "role": "Explore",
+      "model": "sonnet",
+      "status": "spawning",
+      "currentTask": null,
+      "taskId": null,
+      "startedAt": "2026-03-25T04:40:27.667Z",
+      "lastActivityAt": "2026-03-25T04:40:27.667Z"
+    }
+  ],
   "progress": {
     "totalTasks": 0,
     "completedTasks": 0,
