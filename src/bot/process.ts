@@ -10,6 +10,7 @@ export interface StreamEvent {
   content?: string;
   sessionId?: string;
   costUsd?: number;
+  usage?: { input_tokens: number; output_tokens: number; cache_read_input_tokens?: number; cache_creation_input_tokens?: number };
 }
 
 export interface BotProcess {
@@ -18,7 +19,7 @@ export interface BotProcess {
   readonly isRunning: boolean;
   kill(): Promise<void>;
   onEvent(handler: (event: StreamEvent) => void): void;
-  onComplete(handler: (result: { sessionId: string; output: string }) => void): void;
+  onComplete(handler: (result: { sessionId: string; output: string; usage?: StreamEvent['usage']; model?: string; numTurns?: number }) => void): void;
   onError(handler: (error: Error) => void): void;
 }
 
@@ -38,6 +39,7 @@ export function spawnBotProcess(options: SpawnOptions): BotProcess {
     '--output-format', 'stream-json',
     '--dangerously-skip-permissions',
     '--verbose',
+    ...(botConfig.model ? ['--model', botConfig.model] : []),
     ...(sessionId ? ['--resume', sessionId] : []),
     '--',      // 옵션 끝, 이후는 positional argument
     message,
@@ -55,9 +57,12 @@ export function spawnBotProcess(options: SpawnOptions): BotProcess {
   let currentSessionId: string | null = sessionId ?? null;
   let outputBuffer = '';
   let running = true;
+  let lastUsage: StreamEvent['usage'] | undefined;
+  let lastModel: string | undefined;
+  let lastNumTurns: number | undefined;
 
   const eventHandlers: Array<(event: StreamEvent) => void> = [];
-  const completeHandlers: Array<(result: { sessionId: string; output: string }) => void> = [];
+  const completeHandlers: Array<(result: { sessionId: string; output: string; usage?: StreamEvent['usage']; model?: string; numTurns?: number }) => void> = [];
   const errorHandlers: Array<(error: Error) => void> = [];
 
   // stdout line-by-line 파싱
@@ -97,6 +102,29 @@ export function spawnBotProcess(options: SpawnOptions): BotProcess {
         currentSessionId = event.sessionId;
       }
 
+      // result 이벤트에서 usage/model/numTurns 추출
+      if (event.type === 'result') {
+        try {
+          const raw = JSON.parse(line) as Record<string, unknown>;
+          if (raw.usage && typeof raw.usage === 'object') {
+            lastUsage = raw.usage as StreamEvent['usage'];
+          }
+          if (typeof raw.num_turns === 'number') {
+            lastNumTurns = raw.num_turns;
+          }
+        } catch { /* ignore */ }
+      }
+      // model 추출 (assistant 이벤트의 message.model)
+      if (event.type === 'assistant' && !lastModel) {
+        try {
+          const raw = JSON.parse(line) as Record<string, unknown>;
+          const msg = raw.message as Record<string, unknown> | undefined;
+          if (msg && typeof msg.model === 'string') {
+            lastModel = msg.model;
+          }
+        } catch { /* ignore */ }
+      }
+
       for (const handler of eventHandlers) {
         try {
           handler(event);
@@ -130,6 +158,9 @@ export function spawnBotProcess(options: SpawnOptions): BotProcess {
         handler({
           sessionId: currentSessionId ?? '',
           output: outputBuffer,
+          usage: lastUsage,
+          model: lastModel,
+          numTurns: lastNumTurns,
         });
       }
     } else {

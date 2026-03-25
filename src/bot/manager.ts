@@ -423,6 +423,36 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
           }
         }
 
+        // Status 바 추가
+        if (config.settings.showStatus && currentMsgId && sender) {
+          const usage = result.usage;
+          const totalTokens = usage
+            ? (usage.input_tokens ?? 0) + (usage.output_tokens ?? 0) + (usage.cache_read_input_tokens ?? 0) + (usage.cache_creation_input_tokens ?? 0)
+            : 0;
+          const maxContext = 200000; // Opus/Sonnet default
+          const contextPct = totalTokens > 0 ? Math.round((totalTokens / maxContext) * 100) : 0;
+
+          let gitBranch = '';
+          try {
+            gitBranch = execSync('git rev-parse --abbrev-ref HEAD', { cwd: projectBotDir, stdio: ['pipe', 'pipe', 'pipe'] }).toString().trim();
+          } catch { gitBranch = '-'; }
+
+          const shortSession = result.sessionId?.slice(0, 8) ?? '-';
+          const modelName = result.model ?? state.config.model ?? 'opus';
+
+          const statusLine = [
+            `───`,
+            `📌 ${currentProject}`,
+            `🔀 ${gitBranch}`,
+            `🤖 ${modelName}`,
+            `📊 ${contextPct}%`,
+            `🔑 ${shortSession}`,
+          ].join(' · ');
+
+          currentMsgText += `\n\n${statusLine}`;
+          await flushCurrentMsg();
+        }
+
         // 세션 저장
         if (result.sessionId) {
           sessionStore.set(currentProject, route.target, result.sessionId);

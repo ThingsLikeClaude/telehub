@@ -8,7 +8,8 @@ const BotConfigSchema = z.object({
   systemPrompt: z.string().optional(),
   workDir: z.string(),
   color: z.string().default('🤖'),
-  token: z.string().optional(),  // 개별 봇 토큰 (없으면 Hub 토큰 사용)
+  token: z.string().optional(),
+  model: z.string().optional(),  // 봇별 모델 (없으면 기본 opus)
 });
 
 const HubConfigSchema = z.object({
@@ -29,6 +30,7 @@ const HubConfigSchema = z.object({
     maxConcurrentBots: z.number().default(4),
     maxHandoffDepth: z.number().default(3),
     orchestratorModel: z.string().default('haiku'),
+    showStatus: z.boolean().default(true),
   }),
 });
 
