@@ -403,6 +403,8 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
         }
 
         // 파일 첨부 감지: [file:/path/to/file] 또는 [file:/path caption텍스트]
+        // rate limit 방지: 메시지 전송 후 잠시 대기
+        await new Promise((r) => setTimeout(r, 2000));
         const filePattern = /\[file:([^\]\s]+)(?:\s+([^\]]*))?\]/g;
         const fileMatches: Array<{ path: string; caption?: string }> = [];
         let fileMatch: RegExpExecArray | null;
