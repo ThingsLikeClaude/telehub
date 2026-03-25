@@ -1,5 +1,6 @@
-import { mkdirSync, existsSync, cpSync } from 'node:fs';
+import { mkdirSync, existsSync, cpSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { execSync } from 'node:child_process';
 import type { BotConfig, HubConfig } from '../config/schema.js';
 import type { SessionStore } from '../store/session.js';
 import type { QueueManager, RouteResult } from '../core/queue.js';
@@ -157,6 +158,24 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
       // 프로젝트별 봇 디렉토리 (cwd로 사용)
       const projectBaseDir = `${config.projects.baseDir}/${currentProject}`;
       const projectBotDir = join(projectBaseDir, 'bots', state.config.workDir);
+
+      // 프로젝트 루트가 없으면 git init + CLAUDE.md 생성
+      if (!existsSync(join(projectBaseDir, '.git'))) {
+        mkdirSync(projectBaseDir, { recursive: true });
+        try {
+          execSync('git init', { cwd: projectBaseDir, stdio: 'ignore' });
+        } catch { /* ignore */ }
+        if (!existsSync(join(projectBaseDir, 'CLAUDE.md'))) {
+          writeFileSync(join(projectBaseDir, 'CLAUDE.md'), `# ${currentProject}\n\n이 프로젝트의 작업 공간입니다. 한국어로 답변하세요.\n`);
+        }
+        // 공통 팀 규칙 복사
+        const sharedMd = config.botTemplateDir ? join(config.botTemplateDir, 'CLAUDE.md') : join(config.bots_home, 'CLAUDE.md');
+        const botsDir = join(projectBaseDir, 'bots');
+        mkdirSync(botsDir, { recursive: true });
+        if (existsSync(sharedMd) && !existsSync(join(botsDir, 'CLAUDE.md'))) {
+          cpSync(sharedMd, join(botsDir, 'CLAUDE.md'));
+        }
+      }
 
       // 프로젝트 봇 디렉토리가 없으면 템플릿에서 복사
       if (!existsSync(projectBotDir)) {
@@ -526,8 +545,40 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
       const skipped: string[] = [];
       const projectBaseDir = `${config.projects.baseDir}/${currentProject}`;
 
+      // 프로젝트 루트 초기화: git init + CLAUDE.md
+      if (!existsSync(projectBaseDir)) {
+        mkdirSync(projectBaseDir, { recursive: true });
+      }
+      if (!existsSync(join(projectBaseDir, '.git'))) {
+        try {
+          execSync('git init', { cwd: projectBaseDir, stdio: 'ignore' });
+          logger?.info('Git initialized for project', { project: currentProject, dir: projectBaseDir });
+        } catch {
+          logger?.warn('Failed to git init project dir', { dir: projectBaseDir });
+        }
+      }
+      if (!existsSync(join(projectBaseDir, 'CLAUDE.md'))) {
+        writeFileSync(
+          join(projectBaseDir, 'CLAUDE.md'),
+          `# ${currentProject}\n\n이 프로젝트의 작업 공간입니다. 한국어로 답변하세요.\n`,
+        );
+      }
+
+      // 공통 팀 규칙 (bots/CLAUDE.md) 복사
+      const botsDir = join(projectBaseDir, 'bots');
+      if (!existsSync(botsDir)) {
+        mkdirSync(botsDir, { recursive: true });
+      }
+      const sharedClaudeMd = config.botTemplateDir
+        ? join(config.botTemplateDir, 'CLAUDE.md')
+        : join(config.bots_home, 'CLAUDE.md');
+      if (existsSync(sharedClaudeMd) && !existsSync(join(botsDir, 'CLAUDE.md'))) {
+        cpSync(sharedClaudeMd, join(botsDir, 'CLAUDE.md'));
+      }
+
+      // 개별 봇 디렉토리
       for (const botConfig of config.bots) {
-        const projectBotDir = join(projectBaseDir, 'bots', botConfig.workDir);
+        const projectBotDir = join(botsDir, botConfig.workDir);
 
         if (existsSync(projectBotDir)) {
           skipped.push(botConfig.name);
