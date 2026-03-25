@@ -141,19 +141,44 @@ export function createMessageParser(triggerMap: Map<string, string>): MessagePar
   };
 }
 
+export interface TriggerMatch {
+  botName: string;
+  rest: string;  // 트리거 이후 나머지 텍스트
+}
+
 export function matchTrigger(
   word: string,
   triggerMap: Map<string, string>,
 ): string | null {
-  // 직접 매칭
-  const direct = triggerMap.get(word);
-  if (direct) return direct;
+  const result = matchTriggerFull(word, triggerMap);
+  return result?.botName ?? null;
+}
 
-  // 접미사 제거 후 매칭
+export function matchTriggerFull(
+  word: string,
+  triggerMap: Map<string, string>,
+): TriggerMatch | null {
+  // 1. 직접 매칭 (정확히 일치)
+  const direct = triggerMap.get(word);
+  if (direct) return { botName: direct, rest: '' };
+
+  // 2. 접미사 제거 후 매칭
   const cleaned = word.replace(HONORIFIC_SUFFIXES, '');
   if (cleaned !== word) {
     const afterClean = triggerMap.get(cleaned);
-    if (afterClean) return afterClean;
+    if (afterClean) return { botName: afterClean, rest: '' };
+  }
+
+  // 3. Prefix 매칭: "제헌아뭐해" → "제헌" + "아뭐해"
+  //    triggerMap 키를 길이 내림차순으로 시도 (긴 것 우선)
+  const sortedTriggers = [...triggerMap.keys()].sort((a, b) => b.length - a.length);
+  for (const trigger of sortedTriggers) {
+    if (word.startsWith(trigger) && word.length > trigger.length) {
+      const remainder = word.slice(trigger.length);
+      // 접미사(아/야/이/님/씨)로 시작하면 제거
+      const cleanRemainder = remainder.replace(/^[아야이님씨]/, '');
+      return { botName: triggerMap.get(trigger)!, rest: cleanRemainder };
+    }
   }
 
   return null;
