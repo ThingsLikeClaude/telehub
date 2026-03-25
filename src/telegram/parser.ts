@@ -94,11 +94,14 @@ export function createMessageParser(triggerMap: Map<string, string>): MessagePar
           }
         }
 
-        // 단일 트리거 매칭
-        const matched = matchTrigger(firstWord, triggerMap);
-        if (matched) {
-          // #만 제거, 이름 포함한 전체 텍스트 전달
-          return { type: 'keyword', botName: matched, text: stripHashes(text), ...base };
+        // 단일 트리거 매칭 (prefix 매칭 포함: #제헌아뭐해 → 제헌 + 뭐해)
+        const triggerResult = matchTriggerFull(firstWord, triggerMap);
+        if (triggerResult) {
+          // rest가 있으면 (붙어쓰기) 나머지 텍스트와 합침
+          const restFromTrigger = triggerResult.rest;
+          const restFromSpace = spaceIdx === -1 ? '' : withoutHash.slice(spaceIdx + 1).trim();
+          const fullText = [restFromTrigger, restFromSpace].filter(Boolean).join(' ');
+          return { type: 'keyword', botName: triggerResult.botName, text: fullText || stripHashes(text), ...base };
         }
 
         return { type: 'ignore' };
