@@ -97,6 +97,14 @@ async function main(): Promise<void> {
     const parsed = parser.parse(msg, botUsernames);
     const botLog = logger.child({ chatId: msg.chatId, messageId: msg.messageId });
 
+    botLog.debug('Message received', {
+      text: msg.text?.slice(0, 50),
+      parsedType: parsed.type,
+      hasReply: !!msg.replyToMessage,
+      replyFrom: msg.replyToMessage?.from?.username,
+      replyIsBot: msg.replyToMessage?.from?.isBot,
+    });
+
     if (parsed.type === 'system') {
       handleSystemCommand(parsed.command, parsed.args, msg.chatId);
       return;
