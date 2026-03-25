@@ -104,9 +104,20 @@ describe('MessageParser', () => {
       }
     });
 
-    it('should ignore unknown trigger', () => {
+    it('should broadcast unknown # trigger', () => {
       const result = parser.parse(makeMsg({ text: '#모르는봇 해줘' }), botUsernames);
-      expect(result.type).toBe('ignore');
+      expect(result.type).toBe('broadcast');
+      if (result.type === 'broadcast') {
+        expect(result.text).toBe('모르는봇 해줘');
+      }
+    });
+
+    it('should broadcast #너네 as unmatched trigger', () => {
+      const result = parser.parse(makeMsg({ text: '#너네 지금 뭐하고있어?' }), botUsernames);
+      expect(result.type).toBe('broadcast');
+      if (result.type === 'broadcast') {
+        expect(result.text).toBe('너네 지금 뭐하고있어?');
+      }
     });
   });
 
