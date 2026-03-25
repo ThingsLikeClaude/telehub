@@ -264,3 +264,15 @@ function extractTextContent(parsed: Record<string, unknown>): string | null {
 
   return null;
 }
+
+function extractResultText(line: string): string | null {
+  try {
+    const parsed = JSON.parse(line) as Record<string, unknown>;
+    if (parsed.type === 'result' && typeof parsed.result === 'string') {
+      return parsed.result.trim();
+    }
+  } catch {
+    // 무시
+  }
+  return null;
+}
