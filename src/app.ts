@@ -263,6 +263,23 @@ async function main(): Promise<void> {
         await telegram.sendMessage(chatId, '✅ 활성 작업 종료');
         break;
       }
+      case 'purge': {
+        const count = parseInt(args[0] ?? '50', 10);
+        const limit = Math.min(Math.max(count, 1), 200);
+        const confirmMsg = await telegram.sendMessage(chatId, `🗑️ 최근 ${limit}개 메시지 삭제 중...`);
+        let deleted = 0;
+        // /purge 명령 자체 + 확인 메시지 포함해서 삭제
+        for (let id = confirmMsg; id > confirmMsg - limit - 2 && id > 0; id--) {
+          try {
+            await telegram.deleteMessage(chatId, id);
+            deleted++;
+          } catch {
+            // 이미 삭제되었거나 권한 없음 — 무시
+          }
+        }
+        logger.info('Purge completed', { deleted, requested: limit });
+        break;
+      }
     }
   }
 

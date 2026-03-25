@@ -393,10 +393,6 @@ export function createBotManager(deps: BotManagerDeps): BotManager {
               depth: nextDepth,
               maxDepth,
             });
-            telegram?.sendMessage(
-              route.chatId,
-              `🔄 ${handoff.from} → ${handoff.to} (${nextDepth}/${maxDepth})`,
-            );
             await manager.dispatch({
               target: handoff.to,
               text: handoff.task,
